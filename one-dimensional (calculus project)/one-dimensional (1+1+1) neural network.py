@@ -1,16 +1,18 @@
+# All of the weights and biases are initialized to 1 for simplicity
+
 w_1 = 1 # Weight 1
 w_2 = 1 # Weight 2
 b_1 = 1 # Bias 1
 b_2 = 1 # Bias 2
 
-# The neural network will fit a line to any two data points
+# The neural network will fit a line to any set of data points
 data = [[1, -1], [2, 5]]
 
 
 def forward_propogate(data_point: list[float]) -> float:
     return w_2 * ((w_1 * data_point[0]) + b_1) + b_2
 
-
+# This loss is squared error
 def get_loss(data_point: list[float]) -> float:
     y_hat = forward_propogate(data_point)
     y = data_point[1]
@@ -45,19 +47,23 @@ def get_partial_Lb1(data_point: list[float]) -> float:
     y_hat = forward_propogate(data_point)
     return w_2 * 2 * (y - y_hat)
 
-# This loop trains the network for 1,000 epochs with a learning rate of 0.01
-for i in range(1000):
-    partial_Lw2 = 0.01 * (get_partial_Lw2(data[0]) + get_partial_Lw2(data[1]))
-    partial_Lb2 = 0.01 * (get_partial_Lb2(data[0]) + get_partial_Lb2(data[1]))
-    partial_Lw1 = 0.01 * (get_partial_Lw1(data[0]) + get_partial_Lw1(data[1]))
-    partial_Lb1 = 0.01 * (get_partial_Lb1(data[0]) + get_partial_Lb1(data[1]))
 
-    w_2 += partial_Lw2
-    b_2 += partial_Lb2
-    w_1 += partial_Lw1
-    b_1 += partial_Lb1
+epochs = 1000
+learning_rate = 0.01
+
+# This loop trains the network
+for i in range(epochs):
+    partial_Lw2 = (sum([get_partial_Lw2(data_point) for data_point in data])) / len(data)
+    partial_Lb2 = (sum([get_partial_Lb2(data_point) for data_point in data])) / len(data)
+    partial_Lw1 = (sum([get_partial_Lw1(data_point) for data_point in data])) / len(data)
+    partial_Lb1 = (sum([get_partial_Lb1(data_point) for data_point in data])) / len(data)
+
+    w_2 += learning_rate * partial_Lw2
+    b_2 += learning_rate * partial_Lb2
+    w_1 += learning_rate * partial_Lw1
+    b_1 += learning_rate * partial_Lb1
 
 print(f"w_1: {round(w_1, 5)}, b_1: {round(b_1, 5)}, w_2: {round(w_2, 5)}, b_2: {round(b_2, 5)}")
-print(f"Total loss for all data: {get_loss(data[0]) + get_loss(data[1])}")
-print(f"Input: 1, Output: {round(forward_propogate(data[0]), 5)}")
-print(f"Input: 2, Output: {round(forward_propogate(data[1]), 5)}")
+print(f"Total loss for all data: {round(sum([get_loss(data_point) for data_point in data]), 5)}")
+for data_point in data:
+    print(f"Input: {data_point[0]}, Output: {round(forward_propogate(data_point), 5)}")
