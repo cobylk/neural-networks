@@ -12,11 +12,13 @@ data = [[1, -1], [2, 5]]
 def forward_propogate(data_point: list[float]) -> float:
     return w_2 * ((w_1 * data_point[0]) + b_1) + b_2
 
+
 # This loss is squared error
 def get_loss(data_point: list[float]) -> float:
     y_hat = forward_propogate(data_point)
     y = data_point[1]
     return (y - y_hat) ** 2
+
 
 # These get_partial functions return the partial derivative in the function name
 # E.g., get_partial_Lw2 returns the partial derivative of the loss (L) with respect to the second weight (w2).
