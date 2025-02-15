@@ -27,7 +27,7 @@ class HarmonicLoss(nn.Module):
     def __init__(self, model, input_dim=784, n=None, epsilon=1e-8):
         super(HarmonicLoss, self).__init__()
         self.model = model
-        self.n = int(np.sqrt(input_dim)/3) if n is None else n
+        self.n = int(np.sqrt(input_dim)) if n is None else n
         self.epsilon = epsilon
         print(f"Initialized HarmonicLoss with n={self.n}, input_dim={input_dim}")
     
@@ -79,13 +79,12 @@ def train(epochs):
         for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
-            x, output = model(data)  # Get both flattened input and logits
-            loss = criterion(x, target)  # Pass flattened input instead of logits
+            x, output = model(data)
+            loss = criterion(x, target) 
             loss.backward()
             optimizer.step()
 
-        print(f'Train Epoch: {epoch + 1} [{batch_idx * len(data)}/{len(train_loader.dataset)} '
-                      f'({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}')
+        print(f'Epoch {epoch + 1} loss: {loss.item():.6f}')
 
 # Testing loop
 def test():
