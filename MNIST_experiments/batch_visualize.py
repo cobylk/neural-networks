@@ -18,23 +18,20 @@ def main():
         exit(1)
     
     # Find all weight files from the sweep
-    weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt')]# and 'sweep-n=' in f]
+    weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt') and f.startswith('softmax')]
     
     if not weight_files:
         print("No sweep weight files found in saved_weights directory!")
         exit(1)
     
     # Sort files by n value
-    weight_files.sort(key=extract_n)
+    # weight_files.sort(key=extract_n)
     
     # Process each file
     print(f"\nProcessing {len(weight_files)} weight files...")
     for file in weight_files:
-        n = extract_n(file)
-        if n is not None:
-            weights_path = os.path.join(weights_dir, file)
-            print(f"Visualizing weights for n={n}")
-            visualize_weights(weights_path, image_dir)
+        weights_path = os.path.join(weights_dir, file)
+        visualize_weights(weights_path, image_dir)
 
 if __name__ == "__main__":
     main()

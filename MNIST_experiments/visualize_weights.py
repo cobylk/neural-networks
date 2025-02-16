@@ -22,14 +22,15 @@ def visualize_weights(weights_path, image_dir):
             axes.append(fig.add_subplot(gs[i, j]))
     
     # Add title with padding
-    plottitle = "MNIST weight visualization\n" + ''.join(weights_path.split('/')[-1].rsplit('_', 2)[0]).replace('_', ', ')
+    plottitle = "MNIST weight visualization\n" + ''.join(weights_path.split('/')[-1].rsplit('_', 1)[0]).replace('_', ', ')
 
     fig.suptitle(plottitle, fontsize=16, y=1.02)
     
     # Reshape and plot weights for each output neuron
     for i in range(10):
         # Get weights for the i-th output neuron and reshape to 28x28
-        neuron_weights = weights[i].reshape(28, 28).numpy()
+        dim = int(np.sqrt(weights[i].size(0)))
+        neuron_weights = weights[i].reshape(dim, dim).numpy()
         
         # Plot with a bit more contrast
         vmin, vmax = np.percentile(neuron_weights, [2, 98])
@@ -41,7 +42,7 @@ def visualize_weights(weights_path, image_dir):
     plt.colorbar(im, cax=cax)
     
     # Save with extra padding to prevent cutoff
-    save_path = os.path.join(image_dir, weights_path.rsplit('.', 1)[0].split('/')[-1] + 'viz.png')
+    save_path = os.path.join(image_dir, weights_path.rsplit('.', 1)[0].split('/')[-1] + '.png')
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0.2, dpi=300)
     plt.close()
     print(f"Visualization saved to {save_path}")
