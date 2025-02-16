@@ -49,7 +49,7 @@ test_dataset = datasets.MNIST('./data', train=False, transform=transform)
 def train_epoch(model, train_loader, criterion, optimizer, harmonic=False):
     model.train()
     running_loss = 0.0
-    for batch_idx, (data, targets) in enumerate(tqdm(train_loader)):
+    for batch_idx, (data, targets) in enumerate(train_loader):
         data, targets = data.to(device), targets.to(device)
 
         # Forward pass
@@ -165,7 +165,7 @@ def main(args):
     }
     
     # Training loop
-    for epoch in range(args.epochs):
+    for epoch in tqdm(range(args.epochs)):
         epoch_loss = train_epoch(model, train_loader, criterion, optimizer, args.harmonic)
         stats["epoch_losses"].append(epoch_loss)
         
@@ -178,7 +178,7 @@ def main(args):
         else:
             epochs_no_improve += 1
 
-        if epoch % 10 == 0:
+        if epoch + 1 % 10 == 0:
             print(f"Epoch [{epoch + 1}], Loss: {epoch_loss:.4f}")
 
         if epochs_no_improve >= args.patience:

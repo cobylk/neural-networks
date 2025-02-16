@@ -4,13 +4,13 @@ from visualize_weights import visualize_weights
 
 def extract_n(filename):
     """Extract n value from the weight filename."""
-    match = re.search(r'sweep-n=(\d+)', filename)
+    match = re.search(r'n=(\d+)', filename)
     return int(match.group(1)) if match else None
 
 def main():
     # Setup directories
     weights_dir = "saved_weights"
-    image_dir = "saved_images/sweep_weights"
+    image_dir = "saved_images"
     os.makedirs(image_dir, exist_ok=True)
     
     if not os.path.exists(weights_dir):

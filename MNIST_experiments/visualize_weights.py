@@ -57,6 +57,7 @@ if __name__ == "__main__":
         
     print("\nAvailable weight files:")
     weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt')]
+    weight_files.sort()
     for i, file in enumerate(weight_files):
         print(f"{i+1}. {file}")
     
