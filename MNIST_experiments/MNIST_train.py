@@ -35,6 +35,7 @@ class SimpleNN(nn.Module):
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(str(device.type))
 
 # Data loading and preprocessing
 transform = transforms.Compose([

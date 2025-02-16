@@ -2,14 +2,14 @@ import torch
 import matplotlib.pyplot as plt
 import os
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
 
 def visualize_weights(weights_path, image_dir):
     # Load the weights
     weights = torch.load(weights_path)
     
     # Create figure with more space and better dimensions
-    sns.set_style('darkgrid')
+    # sns.set_style('darkgrid')
     fig = plt.figure(figsize=(13, 5))
     
     # Create grid with proper spacing

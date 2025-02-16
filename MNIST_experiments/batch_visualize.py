@@ -18,7 +18,7 @@ def main():
         exit(1)
     
     # Find all weight files from the sweep
-    weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt') and 'sweep-n=' in f]
+    weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt')]# and 'sweep-n=' in f]
     
     if not weight_files:
         print("No sweep weight files found in saved_weights directory!")
