@@ -1,0 +1,31 @@
+{
+    "hyperparameters": {
+        "harmonic": false,
+        "n": null,
+        "epochs": 5,
+        "patience": 10,
+        "min_delta": 0.0001,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "run_name": null
+    },
+    "training_history": {
+        "epoch_losses": [
+            0.5519570244559601,
+            0.32472448304359086,
+            0.29654545536332294,
+            0.2830741847994358,
+            0.2748493797489321
+        ],
+        "early_stop_epoch": null,
+        "best_epoch": 4,
+        "best_loss": 0.2748493797489321,
+        "final_test_loss": 0.27056640237569807,
+        "final_test_accuracy": 92.48
+    },
+    "timestamps": {
+        "start_time": "2025-02-15 17:18:43",
+        "end_time": "2025-02-15 17:18:49",
+        "training_duration": "0:00:06"
+    }
+}
