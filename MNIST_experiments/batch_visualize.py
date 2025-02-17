@@ -17,8 +17,13 @@ def main():
         print(f"Error: {weights_dir} directory not found!")
         exit(1)
     
-    # Find all weight files from the sweep
-    weight_files = [f for f in os.listdir(weights_dir) if f.endswith('.pt') and f.startswith('softmax')]
+    # Find all weight files from the sweep, including in subfolders
+    weight_files = []
+    for root, _, files in os.walk(weights_dir):
+        for file in files:
+            if file.endswith('.pt') and file.startswith('softmax'):
+                rel_path = os.path.relpath(os.path.join(root, file), weights_dir)
+                weight_files.append(rel_path)
     
     if not weight_files:
         print("No sweep weight files found in saved_weights directory!")

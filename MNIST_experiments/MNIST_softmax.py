@@ -100,11 +100,43 @@ def test(model, test_loader, criterion, harmonic=False):
           f'Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)\n')
     return test_loss, accuracy
 
+def collect_softmax_activations(model, test_loader):
+    """Collect and average softmax activations per digit from the test set."""
+    model.eval()
+    # Initialize storage for activations per digit
+    activation_sums = {i: torch.zeros(model.hidden.out_features).to(device) for i in range(10)}
+    counts = {i: 0 for i in range(10)}
+    
+    with torch.no_grad():
+        for data, targets in test_loader:
+            data, targets = data.to(device), targets.to(device)
+            # Get the flattened input and pass through hidden layer
+            x = model.flatten(data)
+            x = model.hidden(x)
+            # Get softmax activations
+            activations = torch.softmax(x / model.temperature, dim=1)
+            
+            # Accumulate activations per digit
+            for digit in range(10):
+                digit_mask = targets == digit
+                if digit_mask.any():
+                    activation_sums[digit] += activations[digit_mask].sum(dim=0)
+                    counts[digit] += digit_mask.sum().item()
+    
+    # Calculate averages and stack into a tensor
+    avg_activations = torch.stack([
+        activation_sums[i] / counts[i] for i in range(10)
+    ])
+    
+    return avg_activations
+
 def save_run_stats(args, stats, save_dir="run_stats"):
     """Save detailed run statistics to a JSON file."""
-    # Create stats directory if it doesn't exist
+    # Create stats directory and any subfolders if they don't exist
     stats_dir = Path(save_dir)
-    stats_dir.mkdir(exist_ok=True)
+    if args.subfolder:
+        stats_dir = stats_dir / args.subfolder
+    stats_dir.mkdir(parents=True, exist_ok=True)
     
     # Prepare the statistics dictionary
     run_info = {
@@ -118,6 +150,7 @@ def save_run_stats(args, stats, save_dir="run_stats"):
             "min_delta": args.min_delta,
             "batch_size": args.batch_size,
             "learning_rate": args.lr,
+            "subfolder": args.subfolder,
             "run_name": args.run_name
         },
         "training_history": {
@@ -136,7 +169,7 @@ def save_run_stats(args, stats, save_dir="run_stats"):
     }
     
     # Generate consistent naming
-    _, full_name, _ = generate_run_name(args)
+    _, full_name, _, _ = generate_run_name(args)
     filename = f"{full_name}_stats.json"
     
     with open(stats_dir / filename, 'w') as f:
@@ -216,18 +249,26 @@ def main(args):
     # Save statistics
     save_run_stats(args, stats)
     
-    # Save the weights
-    weights_dir = "saved_weights"
-    os.makedirs(weights_dir, exist_ok=True)
+    # Save the weights and activations
+    weights_dir = Path("saved_weights")
+    if args.subfolder:
+        weights_dir = weights_dir / args.subfolder
+    weights_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate consistent naming
-    _, full_name, _ = generate_run_name(args)
-    weights_path = os.path.join(weights_dir, f"{full_name}.pt")
+    _, full_name, _, _ = generate_run_name(args)
+    weights_path = weights_dir / f"{full_name}.pt"
+    activations_path = weights_dir / f"{full_name}_activations.pt"
     
-    # Save only the weights from fc1
+    # Save weights from fc1
     weights = model.fc1.weight.data.cpu()
     torch.save(weights, weights_path)
     print(f"Weights saved to {weights_path}")
+    
+    # Collect and save average softmax activations
+    avg_activations = collect_softmax_activations(model, test_loader)
+    torch.save(avg_activations.cpu(), activations_path)
+    print(f"Average softmax activations saved to {activations_path}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train MNIST with Harmonic or Cross-Entropy Loss')
@@ -251,6 +292,8 @@ if __name__ == '__main__':
                         help='hidden layer dimension (default: 100)')
     parser.add_argument('--temperature', type=float, default=1.0,
                         help='temperature for softmax (default: 1.0)')
+    parser.add_argument('--subfolder', type=str, default=None,
+                        help='subfolder to save results in (default: None)')
     
     args = parser.parse_args()
     main(args) 

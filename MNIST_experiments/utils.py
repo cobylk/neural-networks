@@ -21,17 +21,19 @@ class DistLayer(torch.nn.Linear):
         dist_sq = dist_sq / torch.min(dist_sq, dim=-1, keepdim = True)[0]
         return (dist_sq)**(-self.n)
 
-def generate_run_name(args, timestamp=None):
+def generate_run_name(args, timestamp=None, subfolder=None):
     """Generate consistent run names for files and directories.
     
     Args:
         args: The argument parser namespace containing run parameters
         timestamp: Optional timestamp string. If None, generates new timestamp.
+        subfolder: Optional subfolder path to prepend to the full name.
     
     Returns:
         base_name: The base name without timestamp
         full_name: The complete name with timestamp
         timestamp: The timestamp used
+        subfolder_path: The complete subfolder path if provided, otherwise empty string
     """
     if timestamp is None:
         timestamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
@@ -58,4 +60,12 @@ def generate_run_name(args, timestamp=None):
         
     full_name = f"{base_name}_{timestamp}"
     
-    return base_name, full_name, timestamp
+    # Handle subfolder path
+    subfolder_path = ""
+    if subfolder:
+        # Clean up subfolder path and ensure no leading/trailing slashes
+        subfolder_path = '/'.join(filter(None, subfolder.split('/')))
+        if subfolder_path:
+            subfolder_path = f"{subfolder_path}/"
+    
+    return base_name, full_name, timestamp, subfolder_path

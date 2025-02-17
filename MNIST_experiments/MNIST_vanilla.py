@@ -94,9 +94,11 @@ def test(model, test_loader, criterion, harmonic=False):
 
 def save_run_stats(args, stats, save_dir="run_stats"):
     """Save detailed run statistics to a JSON file."""
-    # Create stats directory if it doesn't exist
+    # Create stats directory and any subfolders if they don't exist
     stats_dir = Path(save_dir)
-    stats_dir.mkdir(exist_ok=True)
+    if args.subfolder:
+        stats_dir = stats_dir / args.subfolder
+    stats_dir.mkdir(parents=True, exist_ok=True)
     
     # Prepare the statistics dictionary
     run_info = {
@@ -108,6 +110,7 @@ def save_run_stats(args, stats, save_dir="run_stats"):
             "min_delta": args.min_delta,
             "batch_size": args.batch_size,
             "learning_rate": args.lr,
+            "subfolder": args.subfolder,
             "run_name": args.run_name
         },
         "training_history": {
@@ -126,7 +129,7 @@ def save_run_stats(args, stats, save_dir="run_stats"):
     }
     
     # Generate consistent naming
-    _, full_name, _ = generate_run_name(args)
+    _, full_name, _, _ = generate_run_name(args)
     filename = f"{full_name}_stats.json"
     
     with open(stats_dir / filename, 'w') as f:
@@ -207,12 +210,14 @@ def main(args):
     save_run_stats(args, stats)
     
     # Save the weights
-    weights_dir = "saved_weights"
-    os.makedirs(weights_dir, exist_ok=True)
+    weights_dir = Path("saved_weights")
+    if args.subfolder:
+        weights_dir = weights_dir / args.subfolder
+    weights_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate consistent naming
-    _, full_name, _ = generate_run_name(args)
-    weights_path = os.path.join(weights_dir, f"{full_name}.pt")
+    _, full_name, _, _ = generate_run_name(args)
+    weights_path = weights_dir / f"{full_name}.pt"
     
     # Save only the weights from fc1
     weights = model.fc1.weight.data.cpu()
@@ -237,6 +242,8 @@ if __name__ == '__main__':
                         help='learning rate (default: 0.001)')
     parser.add_argument('--run-name', type=str, default=None,
                         help='name for this training run')
+    parser.add_argument('--subfolder', type=str, default=None,
+                        help='subfolder to save results in (default: None)')
     
     args = parser.parse_args()
     main(args) 
