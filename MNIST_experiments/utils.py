@@ -48,7 +48,9 @@ def generate_run_name(args, timestamp=None, subfolder=None):
         f"n={args.n}" if args.harmonic else None,
         f"epochs={args.epochs}",
         f"temp={args.temperature}" if hasattr(args, 'temperature') else None,
-        f"hidden-dim={args.hidden_dim}" if hasattr(args, 'temperature') else None
+        f"hidden-dim={args.hidden_dim}" if hasattr(args, 'temperature') else None,
+        f"ReLU={args.ReLU}" if hasattr(args, 'ReLU') else None,
+        f"softmax={args.softmax}" if hasattr(args, 'softmax') else None
     ]
     
     # Filter out empty strings and join
