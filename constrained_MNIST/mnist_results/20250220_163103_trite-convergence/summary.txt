@@ -1,0 +1,122 @@
+Run Summary: 20250220_163103_trite-convergence
+==================================================
+
+Model Architecture:
+Input dim: 784
+Hidden dims: [512, 256, 128, 64]
+Output dim: 10
+Parameters: 575,050
+
+Training Configuration:
+Optimizer: Adam
+Learning rate: 0.001
+Batch size: 128
+
+Results:
+Best validation accuracy: 98.13%
+Test accuracy: 98.32%
+Training duration: 26.8s
+
+Network Analysis:
+--------------------
+Weight Statistics:
+network.linear_0.weight:
+  mean: 0.0031
+  std: 0.0559
+  min: -0.5140
+  max: 0.3031
+  norm: 35.4729
+  sparsity: 0.0000
+network.linear_1.weight:
+  mean: -0.0098
+  std: 0.0650
+  min: -0.3644
+  max: 0.2945
+  norm: 23.8130
+  sparsity: 0.0000
+network.linear_2.weight:
+  mean: -0.0089
+  std: 0.0659
+  min: -0.2912
+  max: 0.3571
+  norm: 12.0386
+  sparsity: 0.0000
+network.linear_3.weight:
+  mean: -0.0034
+  std: 0.0753
+  min: -0.2931
+  max: 0.2380
+  norm: 6.8260
+  sparsity: 0.0000
+network.linear_4.weight:
+  mean: -0.0132
+  std: 0.1055
+  min: -0.3559
+  max: 0.1654
+  norm: 2.6867
+  sparsity: 0.0000
+
+Activation Statistics (Validation Set):
+network.linear_0:
+  avg_means: -4.8056
+  std_means: 0.1004
+  avg_stds: 5.1698
+  std_stds: 0.0846
+  avg_sparsity: 0.0000
+  std_sparsity: 0.0000
+network.activation_0:
+  avg_means: 0.4170
+  std_means: 0.0096
+  avg_stds: 1.3533
+  std_stds: 0.0271
+  avg_sparsity: 0.8488
+  std_sparsity: 0.0023
+network.linear_1:
+  avg_means: -2.6159
+  std_means: 0.0720
+  avg_stds: 5.0406
+  std_stds: 0.1262
+  avg_sparsity: 0.0000
+  std_sparsity: 0.0000
+network.activation_1:
+  avg_means: 0.9903
+  std_means: 0.0269
+  avg_stds: 2.2563
+  std_stds: 0.0707
+  avg_sparsity: 0.7313
+  std_sparsity: 0.0026
+network.linear_2:
+  avg_means: -2.4401
+  std_means: 0.0848
+  avg_stds: 7.4534
+  std_stds: 0.2298
+  avg_sparsity: 0.0000
+  std_sparsity: 0.0000
+network.activation_2:
+  avg_means: 2.0095
+  std_means: 0.0585
+  avg_stds: 4.0927
+  std_stds: 0.1498
+  avg_sparsity: 0.6952
+  std_sparsity: 0.0029
+network.linear_3:
+  avg_means: -1.2366
+  std_means: 0.0895
+  avg_stds: 9.1711
+  std_stds: 0.3048
+  avg_sparsity: 0.0000
+  std_sparsity: 0.0000
+network.activation_3:
+  avg_means: 3.2088
+  std_means: 0.0879
+  avg_stds: 4.6590
+  std_stds: 0.1371
+  avg_sparsity: 0.5406
+  std_sparsity: 0.0032
+network.linear_4:
+  avg_means: -2.3582
+  std_means: 0.0861
+  avg_stds: 8.8192
+  std_stds: 0.2416
+  avg_sparsity: 0.0000
+  std_sparsity: 0.0000

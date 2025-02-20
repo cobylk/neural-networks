@@ -1,3 +1,16 @@
+"""
+MNIST Training Infrastructure
+
+This module provides infrastructure for training and analyzing neural networks on the MNIST dataset.
+It includes classes for experiment management, model analysis, and training configuration.
+
+Key Components:
+- PlotConfig: Configuration for controlling which plots to generate
+- ExperimentManager: Manages multiple experiments and provides analysis tools
+- ModelAnalyzer: Analyzes model properties and behavior
+- MNISTTrainer: Handles training and evaluation of models on MNIST
+"""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -43,11 +56,53 @@ def get_system_info() -> Dict[str, Any]:
         'processor': platform.processor()
     }
 
+class PlotConfig:
+    """Configuration for what plots to generate"""
+    def __init__(
+        self,
+        training_curves: bool = True,
+        weight_distributions: bool = True,
+        learning_curves: bool = True,
+        experiment_comparison: bool = True,
+        save_format: str = 'png',
+        dpi: int = 300,
+        style: str = None
+    ):
+        self.training_curves = training_curves
+        self.weight_distributions = weight_distributions
+        self.learning_curves = learning_curves
+        self.experiment_comparison = experiment_comparison
+        self.save_format = save_format
+        self.dpi = dpi
+        self.style = style
+        
+        # Apply plot style safely
+        if style is not None:
+            try:
+                plt.style.use(style)
+            except:
+                print(f"Warning: Style '{style}' not found, using default style.")
+                plt.style.use('default')
+        else:
+            # Try to use seaborn-darkgrid style, fall back to default if not available
+            try:
+                plt.style.use('seaborn-v0_8-darkgrid')
+            except:
+                try:
+                    plt.style.use('seaborn-darkgrid')
+                except:
+                    plt.style.use('default')
+
 class ExperimentManager:
     """Manages multiple experiments and provides analysis tools"""
-    def __init__(self, base_dir: str = "mnist_results"):
+    def __init__(
+        self, 
+        base_dir: str = "mnist_results",
+        plot_config: Optional[PlotConfig] = None
+    ):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(exist_ok=True)
+        self.plot_config = plot_config or PlotConfig()
     
     def load_all_experiments(self) -> pd.DataFrame:
         """Load all experiments into a pandas DataFrame for analysis"""
@@ -91,6 +146,9 @@ class ExperimentManager:
     
     def plot_comparison(self, metric_x: str, metric_y: str, size_metric: Optional[str] = 'num_parameters'):
         """Create scatter plot comparing two metrics across experiments"""
+        if not self.plot_config.experiment_comparison:
+            return None
+            
         df = self.load_all_experiments()
         
         plt.figure(figsize=(12, 8))
@@ -140,9 +198,15 @@ class ExperimentManager:
 
 class ModelAnalyzer:
     """Analyzes model properties and behavior"""
-    def __init__(self, model: BaseMLP, device: str = "cuda" if torch.cuda.is_available() else "cpu"):
+    def __init__(
+        self, 
+        model: BaseMLP, 
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        plot_config: Optional[PlotConfig] = None
+    ):
         self.model = model
         self.device = device
+        self.plot_config = plot_config or PlotConfig()
         
     def analyze_weights(self) -> Dict[str, Dict[str, float]]:
         """Analyze weight statistics for each layer"""
@@ -162,6 +226,9 @@ class ModelAnalyzer:
     
     def plot_weight_distributions(self):
         """Plot weight distributions for each layer"""
+        if not self.plot_config.weight_distributions:
+            return None
+            
         # Count number of weight tensors
         weight_params = [(name, p) for name, p in self.model.named_parameters() if 'weight' in name]
         num_weight_layers = len(weight_params)
@@ -208,20 +275,7 @@ class ModelAnalyzer:
         return dict(activation_stats)
 
 class MNISTTrainer:
-    """
-    Handles training and evaluation of BaseMLP models on MNIST.
-    
-    Args:
-        model (BaseMLP): The model to train
-        batch_size (int): Batch size for training
-        learning_rate (float): Learning rate for optimization
-        device (str): Device to run on ('cuda' or 'cpu')
-        save_dir (str): Directory to save checkpoints and results
-        optimizer_class (Type[optim.Optimizer]): Optimizer class to use
-        optimizer_kwargs (Dict): Additional optimizer parameters
-        criterion (nn.Module): Loss function to use
-        tags (List[str]): List of experiment tags
-    """
+    """Handles training and evaluation of BaseMLP models on MNIST"""
     def __init__(
         self,
         model: BaseMLP,
@@ -232,7 +286,8 @@ class MNISTTrainer:
         optimizer_class: Type[optim.Optimizer] = optim.Adam,
         optimizer_kwargs: Dict = None,
         criterion: nn.Module = nn.CrossEntropyLoss(),
-        tags: List[str] = None  # Add experiment tags
+        tags: List[str] = None,
+        plot_config: Optional[PlotConfig] = None
     ):
         self.model = model.to(device)
         self.device = device
@@ -244,8 +299,10 @@ class MNISTTrainer:
         self.optimizer_kwargs = optimizer_kwargs or {}
         self.criterion = criterion
         
-        # Generate unique run name
-        self.run_name = randomname.get_name()
+        # Generate unique run name with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        random_name = randomname.get_name()
+        self.run_name = f"{timestamp}_{random_name}"
         print(f"Run name: {self.run_name}")
         
         # Create run directory
@@ -315,7 +372,8 @@ class MNISTTrainer:
         }
         
         self.tags = tags or []
-        self.analyzer = ModelAnalyzer(model, device)
+        self.plot_config = plot_config or PlotConfig()
+        self.analyzer = ModelAnalyzer(model, device, plot_config=self.plot_config)
         
         # Update metadata with tags
         self.history['metadata']['tags'] = self.tags
@@ -472,7 +530,7 @@ class MNISTTrainer:
             'test_acc': self.history['test_acc']
         }
         
-        # Save history with metadata
+        # Save history with metadata (always as JSON)
         history_path = self.run_dir / 'history.json'
         with open(history_path, 'w') as f:
             json.dump(self.history, f, indent=4)
@@ -504,39 +562,43 @@ class MNISTTrainer:
             f.write(f"Test accuracy: {self.history['test_acc']:.2f}%\n")
             f.write(f"Training duration: {self.history['metadata']['final_metrics']['training_duration']:.1f}s\n")
         
-        # Plot training curves
-        plt.figure(figsize=(10, 5))
-        
-        # Loss plot
-        plt.subplot(1, 2, 1)
-        plt.plot(self.history['train_loss'], label='Train')
-        plt.plot(self.history['val_loss'], label='Validation')
-        plt.title(f'Loss vs. Epoch\n{self.run_name}')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        
-        # Accuracy plot
-        plt.subplot(1, 2, 2)
-        plt.plot(self.history['train_acc'], label='Train')
-        plt.plot(self.history['val_acc'], label='Validation')
-        plt.title(f'Accuracy vs. Epoch\n{self.run_name}')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy (%)')
-        plt.legend()
-        
-        plt.tight_layout()
-        plt.savefig(self.run_dir / 'training_curves.png')
-        plt.close()
+        # Plot training curves if enabled
+        if self.plot_config.training_curves:
+            plt.figure(figsize=(10, 5))
+            
+            # Loss plot
+            plt.subplot(1, 2, 1)
+            plt.plot(self.history['train_loss'], label='Train')
+            plt.plot(self.history['val_loss'], label='Validation')
+            plt.title(f'Loss vs. Epoch\n{self.run_name}')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend()
+            
+            # Accuracy plot
+            plt.subplot(1, 2, 2)
+            plt.plot(self.history['train_acc'], label='Train')
+            plt.plot(self.history['val_acc'], label='Validation')
+            plt.title(f'Accuracy vs. Epoch\n{self.run_name}')
+            plt.xlabel('Epoch')
+            plt.ylabel('Accuracy (%)')
+            plt.legend()
+            
+            plt.tight_layout()
+            plt.savefig(self.run_dir / f'training_curves.{self.plot_config.save_format}', dpi=self.plot_config.dpi)
+            plt.close()
         
         # Add weight analysis
         weight_stats = self.analyzer.analyze_weights()
         self.history['metadata']['weight_analysis'] = weight_stats
         
-        # Save weight distribution plot
+        # Save weight distribution plot if enabled
         weight_dist_fig = self.analyzer.plot_weight_distributions()
         if weight_dist_fig:
-            weight_dist_fig.savefig(self.run_dir / 'weight_distributions.png')
+            weight_dist_fig.savefig(
+                self.run_dir / f'weight_distributions.{self.plot_config.save_format}',
+                dpi=self.plot_config.dpi
+            )
             plt.close(weight_dist_fig)
         
         # Compute and save activation statistics
@@ -560,40 +622,3 @@ class MNISTTrainer:
                     f.write(f"  {stat_name}: {value:.4f}\n")
         
         print(f'Results saved in: {self.run_dir}')
-
-def main():
-    """Main training script with experiment management"""
-    # Create experiment manager
-    exp_manager = ExperimentManager('mnist_results')
-    
-    # Create and train model
-    model = BaseMLP(
-        input_dim=784,
-        hidden_dims=[512, 256, 128, 64],
-        output_dim=10,
-        dropout_prob=0.0,
-        store_activations=True
-    )
-    
-    # Create trainer with tags
-    trainer = MNISTTrainer(
-        model=model,
-        batch_size=128,
-        learning_rate=0.001,
-        save_dir='mnist_results',
-        tags=['baseline', 'large_model']  # Add relevant tags
-    )
-    
-    # Train model
-    trainer.train(epochs=30, early_stopping_patience=5)
-    
-    # Compare with previous experiments
-    exp_manager.compare_experiments()
-    
-    # Create comparison plots
-    comparison_fig = exp_manager.plot_comparison('training_duration', 'test_acc')
-    comparison_fig.savefig('mnist_results/experiment_comparison.png')
-    plt.close(comparison_fig)
-
-if __name__ == '__main__':
-    main()

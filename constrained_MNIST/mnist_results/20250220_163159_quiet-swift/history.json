@@ -1,0 +1,122 @@
+{
+    "train_loss": [
+        0.568110969517892,
+        0.23243102240618937,
+        0.18395825614049255,
+        0.15693238004159307,
+        0.13490883220799302,
+        0.12408627006026665,
+        0.11543610572408868,
+        0.10294110572265718,
+        0.102095750436381,
+        0.09332854553871739
+    ],
+    "train_acc": [
+        82.66111111111111,
+        94.07407407407408,
+        95.25925925925925,
+        95.96111111111111,
+        96.47407407407407,
+        96.78518518518518,
+        97.10555555555555,
+        97.21296296296296,
+        97.29074074074074,
+        97.55740740740741
+    ],
+    "val_loss": [
+        0.18084280446488807,
+        0.14352290847517074,
+        0.11341556789789428,
+        0.10919698458561237,
+        0.1067481188182818,
+        0.09412108871966918,
+        0.09206475746481026,
+        0.09680004150884107,
+        0.0870710863593094,
+        0.07928198198986022
+    ],
+    "val_acc": [
+        94.83333333333333,
+        95.98333333333333,
+        96.91666666666667,
+        96.86666666666666,
+        97.21666666666667,
+        97.38333333333334,
+        97.4,
+        97.65,
+        97.73333333333333,
+        97.85
+    ],
+    "test_loss": 0.07826431717572471,
+    "test_acc": 97.9,
+    "metadata": {
+        "timestamp": "2025-02-20T16:31:59.603292",
+        "run_name": "20250220_163159_quiet-swift",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128,
+                64
+            ],
+            "output_dim": 10,
+            "activation_type": "ReLU",
+            "dropout_prob": 0.4,
+            "store_activations": true,
+            "num_parameters": 575050,
+            "num_trainable_parameters": 575050
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "fb7674b1d074a74b64c66ec4a4a2ff0ad1c48a87",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "vanilla",
+            "layers_4",
+            "dropout_0.4"
+        ],
+        "final_metrics": {
+            "best_val_loss": 0.07928198198986022,
+            "best_val_acc": 97.85,
+            "best_epoch": 9,
+            "total_epochs": 10,
+            "training_duration": 27.4687,
+            "test_loss": 0.07826431717572471,
+            "test_acc": 97.9
+        }
+    }
+}
