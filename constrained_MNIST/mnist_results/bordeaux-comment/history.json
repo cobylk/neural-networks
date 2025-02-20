@@ -1,0 +1,113 @@
+{
+    "train_loss": [
+        0.3186712793529175,
+        0.11139012855958741,
+        0.07669395178454924,
+        0.05672935988937209,
+        0.044623258179362635,
+        0.036823664785261265,
+        0.03032495386532168,
+        0.026387400304875446,
+        0.024181382109491615
+    ],
+    "train_acc": [
+        90.18888888888888,
+        96.52037037037037,
+        97.6537037037037,
+        98.28148148148148,
+        98.61296296296297,
+        98.76851851851852,
+        99.06666666666666,
+        99.16111111111111,
+        99.21481481481482
+    ],
+    "val_loss": [
+        0.14495414582655786,
+        0.10709218657080163,
+        0.090495039689097,
+        0.07658406810716112,
+        0.08286578263691131,
+        0.09493798233489407,
+        0.08435934303982302,
+        0.08341088781054033,
+        0.09753245179680117
+    ],
+    "val_acc": [
+        95.7,
+        96.71666666666667,
+        97.36666666666666,
+        97.93333333333334,
+        97.7,
+        97.51666666666667,
+        97.85,
+        97.9,
+        97.78333333333333
+    ],
+    "test_loss": 0.08938418312377334,
+    "test_acc": 97.92,
+    "metadata": {
+        "timestamp": "2025-02-20T15:51:19.503182",
+        "run_name": "bordeaux-comment",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128,
+                64
+            ],
+            "output_dim": 10,
+            "activation_type": "ReLU",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 575050,
+            "num_trainable_parameters": 575050
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "6bd34bb6863a5ce6fff8367e3a364cf515e30dad",
+            "branch": "main",
+            "is_dirty": false
+        },
+        "final_metrics": {
+            "best_val_loss": 0.07658406810716112,
+            "best_val_acc": 97.93333333333334,
+            "best_epoch": 3,
+            "total_epochs": 9,
+            "training_duration": 23.418644,
+            "test_loss": 0.08938418312377334,
+            "test_acc": 97.92
+        }
+    }
+}
