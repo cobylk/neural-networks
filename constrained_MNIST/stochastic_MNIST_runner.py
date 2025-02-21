@@ -41,7 +41,8 @@ def run_stochastic_experiment(
     early_stopping_patience=5,
     save_dir='stochastic_experiments',
     activation_class=None,
-    activation_kwargs=None
+    activation_kwargs=None,
+    layer_kwargs=None
 ):
     """Run experiment with StochasticLayer and simplex-normalized MNIST data"""
     
@@ -49,6 +50,10 @@ def run_stochastic_experiment(
     activation_name = activation_class.__name__ if activation_class else "NoActivation"
     if activation_kwargs:
         activation_name += "_" + "_".join(f"{k}_{v}" for k, v in activation_kwargs.items())
+    
+    # Add layer parameters to directory name
+    if layer_kwargs:
+        activation_name += "_layer_" + "_".join(f"{k}_{v}" for k, v in layer_kwargs.items())
     
     # Create experiment directory
     experiment_dir = f"{save_dir}/{activation_name}"
@@ -77,6 +82,7 @@ def run_stochastic_experiment(
         hidden_dims=hidden_dims,
         output_dim=10,
         layer_class=StochasticLayer,
+        layer_kwargs=layer_kwargs,
         activation=activation,
         store_activations=True
     )
@@ -104,58 +110,63 @@ def main():
     # Define activation functions to test
     activations = [
         (None, None),  # No activation (just stochastic layers)
-        # (RescaledReLU, {'eps': 1e-6}),
-        # (LayerwiseSoftmax, {'temperature': 0.7}),
-        # (LayerwiseSoftmax, {'temperature': 0.5}),
-        # (PowerNormalization, {'alpha': 0.5, 'eps': 1e-6}),
-        # (TemperaturePowerNorm, {'alpha': 0.5, 'temperature': 0.7, 'eps': 1e-6}),
         (SparseMax, None)
     ]
     
     # Test different network architectures
     architectures = [
-        [256],
+        [512],          # Single layer
+        [512, 256],     # Two layers
+        [512, 256, 128] # Three layers
     ]
+    
+    # Test different temperatures for the stochastic layer
+    temperatures = [0.01, 0.1, 1.0, 0.5]  # Lower temperatures for sharper distributions
     
     results = []
     
     # Run experiments for each combination
-    for hidden_dims in architectures:
-        for activation_class, activation_kwargs in activations:
-            activation_name = activation_class.__name__ if activation_class else "NoActivation"
-            print(f"\nRunning experiment with:")
-            print(f"Architecture: {hidden_dims}")
-            print(f"Activation: {activation_name}")
-            if activation_kwargs:
-                print(f"Parameters: {activation_kwargs}")
-            
-            config = {
-                'hidden_dims': hidden_dims,
-                'epochs': 100,
-                'learning_rate': 0.001,
-                'batch_size': 128,
-                'activation_class': activation_class,
-                'activation_kwargs': activation_kwargs
-            }
-            
-            trainer, history, act_name = run_stochastic_experiment(**config)
-            results.append({
-                'architecture': hidden_dims,
-                'activation': act_name,
-                'test_acc': history['test_acc'],  # Get final test accuracy
-                'train_acc': history['train_acc'][-1]  # Get final train accuracy
-            })
-            print(f"Test accuracy: {history['test_acc']:.2f}%")
+    for temp in temperatures:
+        for hidden_dims in architectures:
+            for activation_class, activation_kwargs in activations:
+                activation_name = activation_class.__name__ if activation_class else "NoActivation"
+                print(f"\nRunning experiment with:")
+                print(f"Architecture: {hidden_dims}")
+                print(f"Activation: {activation_name}")
+                print(f"StochasticLayer Temperature: {temp}")
+                if activation_kwargs:
+                    print(f"Activation parameters: {activation_kwargs}")
+                
+                # Create model with specific temperature
+                config = {
+                    'hidden_dims': hidden_dims,
+                    'epochs': 50,
+                    'learning_rate': 0.001, 
+                    'batch_size': 128,
+                    'activation_class': activation_class,
+                    'activation_kwargs': activation_kwargs,
+                    'layer_kwargs': {'temperature': temp}
+                }
+                
+                trainer, history, act_name = run_stochastic_experiment(**config)
+                results.append({
+                    'architecture': hidden_dims,
+                    'activation': act_name,
+                    'temperature': temp,
+                    'test_acc': history['test_acc'],
+                    'train_acc': history['train_acc'][-1]
+                })
+                print(f"Test accuracy: {history['test_acc']:.2f}%")
     
     # Print comprehensive summary
     print("\nExperiment Summary:")
-    print("-" * 80)
-    print(f"{'Activation':<30} {'Architecture':<20} {'Test Acc':>10} {'Train Acc':>10}")
-    print("-" * 80)
+    print("-" * 100)
+    print(f"{'Activation':<20} {'Architecture':<15} {'Temp':>5} {'Test Acc':>10} {'Train Acc':>10}")
+    print("-" * 100)
     for result in results:
-        print(f"{result['activation']:<30} {str(result['architecture']):<20} "
-              f"{result['test_acc']:>9.2f}% {result['train_acc']:>9.2f}%")
-    print("-" * 80)
+        print(f"{result['activation']:<20} {str(result['architecture']):<15} "
+              f"{result['temperature']:>5.2f} {result['test_acc']:>9.2f}% {result['train_acc']:>9.2f}%")
+    print("-" * 100)
 
 if __name__ == '__main__':
     main() 

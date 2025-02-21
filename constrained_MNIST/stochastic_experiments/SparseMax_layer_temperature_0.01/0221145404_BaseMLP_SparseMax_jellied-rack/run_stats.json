@@ -1,0 +1,184 @@
+{
+    "train_loss": [
+        1.8585427448647847,
+        1.8021341915379203,
+        1.8012109130479714,
+        1.7999878051156681,
+        1.8001256248962259,
+        1.799699573720236,
+        1.7993244020294805,
+        1.7991822325222866,
+        1.799305917244952
+    ],
+    "train_acc": [
+        72.92222222222222,
+        75.52407407407408,
+        75.66481481481482,
+        75.82037037037037,
+        75.74259259259259,
+        75.83148148148148,
+        75.92037037037036,
+        75.8425925925926,
+        75.86666666666666
+    ],
+    "val_loss": [
+        1.8113833539029385,
+        1.8060296013000163,
+        1.8041164545302695,
+        1.8032133807527257,
+        1.8034998051663662,
+        1.806339608862045,
+        1.804067426539482,
+        1.8056802952543218,
+        1.8036823754614972
+    ],
+    "val_acc": [
+        74.86666666666666,
+        75.93333333333334,
+        75.15,
+        75.36666666666666,
+        75.01666666666667,
+        75.11666666666666,
+        74.93333333333334,
+        75.06666666666666,
+        74.93333333333334
+    ],
+    "test_loss": 1.794446578508691,
+    "test_acc": 75.93,
+    "metadata": {
+        "timestamp": "2025-02-21T14:54:04.188149",
+        "run_name": "0221145404_BaseMLP_SparseMax_jellied-rack",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "SparseMax",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 566528,
+            "num_trainable_parameters": 566528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "e002b61e0f49ed24cde6d4c5b63a2d8ef535d0f8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_3",
+            "activation_SparseMax_layer_temperature_0.01"
+        ],
+        "final_metrics": {
+            "best_val_loss": 1.8032133807527257,
+            "best_val_acc": 75.93333333333334,
+            "best_epoch": 3,
+            "total_epochs": 9,
+            "training_duration": 35.348294,
+            "test_loss": 1.794446578508691,
+            "test_acc": 75.93
+        },
+        "weight_analysis": {
+            "network.linear_0.raw_weight": {
+                "mean": 0.008968126960098743,
+                "std": 0.05084243789315224,
+                "min": -0.13824023306369781,
+                "max": 0.18521033227443695,
+                "norm": 32.70917892456055,
+                "sparsity": 0.0
+            },
+            "network.linear_1.raw_weight": {
+                "mean": 0.001872853608801961,
+                "std": 0.05748677998781204,
+                "min": -0.10629677027463913,
+                "max": 0.23271408677101135,
+                "norm": 20.823383331298828,
+                "sparsity": 0.0
+            },
+            "network.linear_2.raw_weight": {
+                "mean": -0.00197771773673594,
+                "std": 0.07525111734867096,
+                "min": -0.12498727440834045,
+                "max": 0.284203439950943,
+                "norm": 13.626399993896484,
+                "sparsity": 0.0
+            },
+            "network.linear_3.raw_weight": {
+                "mean": -0.02172667533159256,
+                "std": 0.09543213993310928,
+                "min": -0.2082587480545044,
+                "max": 0.30988699197769165,
+                "norm": 3.500349998474121,
+                "sparsity": 0.0
+            }
+        },
+        "activation_analysis": {
+            "network.linear_0": {
+                "avg_means": -0.2135302075680266,
+                "std_means": 0.007032822085337977,
+                "avg_stds": 0.17454870330526473,
+                "std_stds": 0.004243210407138516,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_1": {
+                "avg_means": 0.0038942935173102516,
+                "std_means": 1.1014718744879897e-05,
+                "avg_stds": 0.049275265649912206,
+                "std_stds": 0.0007850917620851345,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_2": {
+                "avg_means": 0.007799844396241168,
+                "std_means": 1.1517177730858678e-05,
+                "avg_stds": 0.06946814678450848,
+                "std_stds": 0.0011136100516253005,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_3": {
+                "avg_means": 0.09968591164401237,
+                "std_means": 0.0002845169741749542,
+                "avg_stds": 0.22945107012353044,
+                "std_stds": 0.004300938983184622,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            }
+        }
+    }
+}

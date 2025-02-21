@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 from base_MLP import BaseLayer
 
 class StochasticLayer(BaseLayer):
@@ -16,28 +17,25 @@ class StochasticLayer(BaseLayer):
     Args:
         in_features (int): Size of input features
         out_features (int): Size of output features
+        temperature (float): Temperature parameter for softmax (default: 1.0)
     """
-    def __init__(self, in_features: int, out_features: int):
+    def __init__(self, in_features: int, out_features: int, temperature: float = 1.0):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
+        self.temperature = temperature
         
-        # Initialize as random stochastic matrix
-        raw_weights = torch.rand(out_features, in_features)
-        # Normalize rows to sum to 1 to create valid stochastic matrix
-        stochastic_weights = raw_weights / raw_weights.sum(dim=1, keepdim=True)
+        # Initialize with Glorot/Xavier initialization
+        bound = math.sqrt(6. / (in_features + out_features))
+        raw_weights = torch.empty(out_features, in_features).uniform_(-bound, bound)
         
-        self.weight = nn.Parameter(stochastic_weights)
-        # No bias term to preserve simplex properties
+        # Store raw weights - softmax will be applied in forward pass
+        self.raw_weight = nn.Parameter(raw_weights)
         self.register_parameter('bias', None)
     
-    def _project_to_stochastic(self):
-        """Project weights back to valid stochastic matrix space"""
-        with torch.no_grad():
-            # Ensure non-negativity
-            self.weight.data = F.relu(self.weight.data)
-            # Normalize rows to sum to 1
-            self.weight.data = self.weight.data / (self.weight.data.sum(dim=1, keepdim=True) + 1e-8)
+    def get_stochastic_weights(self):
+        """Convert raw weights to stochastic matrix using softmax"""
+        return F.softmax(self.raw_weight / self.temperature, dim=1)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -50,10 +48,8 @@ class StochasticLayer(BaseLayer):
         Returns:
             torch.Tensor: Output tensor guaranteed to be on the probability simplex
         """
-        # Project weights to ensure they form a valid stochastic matrix
-        self._project_to_stochastic()
+        # Get stochastic weights through softmax
+        stochastic_weights = self.get_stochastic_weights()
         
         # Apply the stochastic transformation
-        # Since weights are stochastic and input is on simplex,
-        # output will automatically be on simplex
-        return F.linear(x, self.weight) 
+        return F.linear(x, stochastic_weights) 

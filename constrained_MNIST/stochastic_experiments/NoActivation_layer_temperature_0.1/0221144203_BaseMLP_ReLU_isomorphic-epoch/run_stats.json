@@ -1,0 +1,162 @@
+{
+    "train_loss": [
+        2.302585339659198,
+        2.302585094460944,
+        2.302584998415545,
+        2.302585139658779,
+        2.3025850091500306,
+        2.3025850198845164,
+        2.3025851475684,
+        2.3025850193195434,
+        2.302585039658569,
+        2.3025850916360793
+    ],
+    "train_acc": [
+        8.066666666666666,
+        8.244444444444444,
+        8.35,
+        8.562962962962963,
+        8.38888888888889,
+        8.3,
+        8.24074074074074,
+        8.342592592592593,
+        8.05,
+        8.044444444444444
+    ],
+    "val_loss": [
+        2.3025853633880615,
+        2.302585358315326,
+        2.3025853633880615,
+        2.302585358315326,
+        2.30258535324259,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.302585358315326,
+        2.302585358315326,
+        2.302585358315326
+    ],
+    "val_acc": [
+        9.966666666666667,
+        9.816666666666666,
+        9.8,
+        9.783333333333333,
+        9.916666666666666,
+        9.883333333333333,
+        9.833333333333334,
+        9.916666666666666,
+        9.816666666666666,
+        9.983333333333333
+    ],
+    "test_loss": 2.3025853633880615,
+    "test_acc": 9.8,
+    "metadata": {
+        "timestamp": "2025-02-21T14:42:03.858037",
+        "run_name": "0221144203_BaseMLP_ReLU_isomorphic-epoch",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512
+            ],
+            "output_dim": 10,
+            "activation_type": "ReLU",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 406528,
+            "num_trainable_parameters": 406528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "e002b61e0f49ed24cde6d4c5b63a2d8ef535d0f8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_1",
+            "activation_NoActivation_layer_temperature_0.1"
+        ],
+        "final_metrics": {
+            "best_val_loss": 2.30258535324259,
+            "best_val_acc": 9.983333333333333,
+            "best_epoch": 4,
+            "total_epochs": 10,
+            "training_duration": 23.651181,
+            "test_loss": 2.3025853633880615,
+            "test_acc": 9.8
+        },
+        "weight_analysis": {
+            "network.linear_0.weight": {
+                "mean": 0.0012755101779475808,
+                "std": 0.0,
+                "min": 0.0012755101779475808,
+                "max": 0.0012755101779475808,
+                "norm": 0.8077387809753418,
+                "sparsity": 0.0
+            },
+            "network.linear_1.weight": {
+                "mean": 0.001953125,
+                "std": 0.0,
+                "min": 0.001953125,
+                "max": 0.001953125,
+                "norm": 0.1397542506456375,
+                "sparsity": 0.0
+            }
+        },
+        "activation_analysis": {
+            "network.linear_0": {
+                "avg_means": 0.0006946281460609208,
+                "std_means": 0.013098608109202107,
+                "avg_stds": 0.140306515738051,
+                "std_stds": 0.01169017337777906,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.activation_0": {
+                "avg_means": 0.05669214608187371,
+                "std_means": 0.00899136662112118,
+                "avg_stds": 0.08905426967651286,
+                "std_stds": 0.011650786935980113,
+                "avg_sparsity": 0.5297064971416554,
+                "std_sparsity": 0.042181100160766594
+            },
+            "network.linear_1": {
+                "avg_means": 0.05669215868445153,
+                "std_means": 0.00899135408060767,
+                "avg_stds": 0.08908850604549368,
+                "std_stds": 0.011655150225443242,
+                "avg_sparsity": 0.5297064971416554,
+                "std_sparsity": 0.042181100160766594
+            }
+        }
+    }
+}
