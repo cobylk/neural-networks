@@ -1,0 +1,190 @@
+{
+    "train_loss": [
+        2.301916373284507,
+        2.301556628462263,
+        2.3015697369643298,
+        2.301567517750636,
+        2.301574121154315,
+        2.301510933451178
+    ],
+    "train_acc": [
+        10.701851851851853,
+        11.142592592592592,
+        11.14074074074074,
+        11.14074074074074,
+        11.14074074074074,
+        11.14074074074074
+    ],
+    "val_loss": [
+        2.299177996655728,
+        2.2994342712645834,
+        2.2994112765535397,
+        2.2993171773058303,
+        2.2994595030520824,
+        2.299853264017308
+    ],
+    "val_acc": [
+        12.1,
+        12.1,
+        12.1,
+        12.1,
+        12.1,
+        12.1
+    ],
+    "test_loss": 2.3011640265018127,
+    "test_acc": 11.35,
+    "metadata": {
+        "timestamp": "2025-02-20T21:37:30.238110",
+        "run_name": "0220213730_BaseMLP_LayerwiseSoftmax_horizontal-voice",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128,
+                64
+            ],
+            "output_dim": 10,
+            "activation_type": "LayerwiseSoftmax",
+            "dropout_prob": 0.1,
+            "store_activations": true,
+            "num_parameters": 575050,
+            "num_trainable_parameters": 575050
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "15e48a32d31478ac54b6c3350a900b9f6e2bcba1",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "layers_4",
+            "dropout_0.1",
+            "activation_LayerwiseSoftmax_temperature_1.0"
+        ],
+        "final_metrics": {
+            "best_val_loss": 2.299177996655728,
+            "best_val_acc": 12.1,
+            "best_epoch": 0,
+            "total_epochs": 6,
+            "training_duration": 17.536875,
+            "test_loss": 2.3011640265018127,
+            "test_acc": 11.35
+        },
+        "weight_analysis": {
+            "network.linear_0.weight": {
+                "mean": 3.568974352674559e-05,
+                "std": 0.020632663741707802,
+                "min": -0.036755308508872986,
+                "max": 0.03745262324810028,
+                "norm": 13.072104454040527,
+                "sparsity": 0.0
+            },
+            "network.linear_1.weight": {
+                "mean": 6.600313645321876e-05,
+                "std": 0.025576453655958176,
+                "min": -0.045163244009017944,
+                "max": 0.04543619230389595,
+                "norm": 9.259645462036133,
+                "sparsity": 0.0
+            },
+            "network.linear_2.weight": {
+                "mean": -9.583462087903172e-05,
+                "std": 0.036482032388448715,
+                "min": -0.0760464146733284,
+                "max": 0.07825169712305069,
+                "norm": 6.603870868682861,
+                "sparsity": 0.0
+            },
+            "network.linear_3.weight": {
+                "mean": 0.001868205377832055,
+                "std": 0.06100810319185257,
+                "min": -0.18137650191783905,
+                "max": 0.17964428663253784,
+                "norm": 5.524074077606201,
+                "sparsity": 0.0
+            },
+            "network.linear_4.weight": {
+                "mean": 0.0018385577714070678,
+                "std": 0.07847803086042404,
+                "min": -0.178025484085083,
+                "max": 0.21307602524757385,
+                "norm": 1.984347939491272,
+                "sparsity": 0.0
+            }
+        },
+        "activation_analysis": {
+            "network.linear_0": {
+                "avg_means": 0.014633172667248453,
+                "std_means": 0.002212305692921013,
+                "avg_stds": 0.5822378878897809,
+                "std_stds": 0.009563039276832129,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_1": {
+                "avg_means": -0.0015530761237196782,
+                "std_means": 2.741546789924373e-06,
+                "avg_stds": 0.023281941586669457,
+                "std_stds": 2.990586286438256e-06,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_2": {
+                "avg_means": 0.0018125541552782376,
+                "std_means": 7.447229246590214e-09,
+                "avg_stds": 0.05283905985824605,
+                "std_stds": 3.445806355560926e-08,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_3": {
+                "avg_means": 0.007621574166052519,
+                "std_means": 6.808246443329292e-10,
+                "avg_stds": 0.07778280180819491,
+                "std_stds": 9.783912663516837e-08,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_4": {
+                "avg_means": -0.019400890876955176,
+                "std_means": 2.6878880943727573e-10,
+                "avg_stds": 0.0490491972800265,
+                "std_stds": 3.9511954987279536e-07,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            }
+        }
+    }
+}

@@ -41,7 +41,7 @@ class BaseMLP(nn.Module):
         hidden_dims (List[int]): List of hidden layer dimensions
         output_dim (int): Output dimension (10 for MNIST)
         layer_class (Type[Union[nn.Linear, BaseLayer]]): Layer class to use (default: nn.Linear)
-        activation (Type[nn.Module]): Activation function class (default: nn.ReLU)
+        activation (Optional[nn.Module]): Activation function class (default: None)
         dropout_prob (float): Dropout probability (default: 0.0)
         store_activations (bool): Whether to store activations during forward pass (default: False)
     """
@@ -51,7 +51,7 @@ class BaseMLP(nn.Module):
         hidden_dims: List[int] = [128, 64],
         output_dim: int = 10,
         layer_class: Type[Union[nn.Linear, BaseLayer]] = nn.Linear,
-        activation: Type[nn.Module] = nn.ReLU,
+        activation: Optional[nn.Module] = None,
         dropout_prob: float = 0.0,
         store_activations: bool = False
     ):
@@ -71,7 +71,8 @@ class BaseMLP(nn.Module):
         for idx, hidden_dim in enumerate(hidden_dims):
             layer = layer_class(prev_dim, hidden_dim)
             layers.append((f"linear_{idx}", layer))
-            act = activation()
+            # Use provided activation or default to ReLU
+            act = activation if activation is not None else nn.ReLU()
             layers.append((f"activation_{idx}", act))
             if dropout_prob > 0:
                 layers.append((f"dropout_{idx}", nn.Dropout(dropout_prob)))

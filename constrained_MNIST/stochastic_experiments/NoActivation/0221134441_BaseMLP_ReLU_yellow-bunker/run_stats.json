@@ -1,0 +1,187 @@
+{
+    "train_loss": [
+        2.071758759247748,
+        2.047661393174628,
+        2.038009307113304,
+        2.039371255167288,
+        2.0414972709253503,
+        2.0404246164159185,
+        2.041160678411547,
+        2.055220210439221,
+        2.0440617234785976,
+        2.0400327901704616
+    ],
+    "train_acc": [
+        25.405555555555555,
+        18.37037037037037,
+        26.288888888888888,
+        25.25,
+        25.46851851851852,
+        25.464814814814815,
+        25.28148148148148,
+        24.89814814814815,
+        25.424074074074074,
+        25.614814814814814
+    ],
+    "val_loss": [
+        2.0489833710041454,
+        2.0406661540903945,
+        2.0403977784704654,
+        2.0436638619037386,
+        2.036945662599929,
+        2.0438232117510857,
+        2.048129492617668,
+        2.0545401725363224,
+        2.0394866669431644,
+        2.0396143223376986
+    ],
+    "val_acc": [
+        15.533333333333333,
+        24.483333333333334,
+        26.166666666666668,
+        25.583333333333332,
+        25.066666666666666,
+        25.933333333333334,
+        25.7,
+        25.333333333333332,
+        26.233333333333334,
+        26.65
+    ],
+    "test_loss": 2.0369931399067744,
+    "test_acc": 26.18,
+    "metadata": {
+        "timestamp": "2025-02-21T13:44:41.721173",
+        "run_name": "0221134441_BaseMLP_ReLU_yellow-bunker",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "ReLU",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 234752,
+            "num_trainable_parameters": 234752
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "15e48a32d31478ac54b6c3350a900b9f6e2bcba1",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_2",
+            "activation_NoActivation"
+        ],
+        "final_metrics": {
+            "best_val_loss": 2.036945662599929,
+            "best_val_acc": 26.65,
+            "best_epoch": 4,
+            "total_epochs": 10,
+            "training_duration": 24.067073,
+            "test_loss": 2.0369931399067744,
+            "test_acc": 26.18
+        },
+        "weight_analysis": {
+            "network.linear_0.weight": {
+                "mean": 0.0012755101779475808,
+                "std": 0.002178969094529748,
+                "min": 0.0,
+                "max": 0.014764749445021152,
+                "norm": 1.1311235427856445,
+                "sparsity": 0.6460409164428711
+            },
+            "network.linear_1.weight": {
+                "mean": 0.00390625,
+                "std": 0.006381615065038204,
+                "min": 0.0,
+                "max": 0.0526677742600441,
+                "norm": 1.354414463043213,
+                "sparsity": 0.491943359375
+            },
+            "network.linear_2.weight": {
+                "mean": 0.0078125,
+                "std": 0.012598523870110512,
+                "min": 0.0,
+                "max": 0.07146742939949036,
+                "norm": 0.5302183032035828,
+                "sparsity": 0.510937511920929
+            }
+        },
+        "activation_analysis": {
+            "network.linear_0": {
+                "avg_means": 0.3410115730255208,
+                "std_means": 0.021123595533200555,
+                "avg_stds": 0.4560207426548004,
+                "std_stds": 0.013151479506045931,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.activation_0": {
+                "avg_means": 0.39796226455810224,
+                "std_means": 0.019826138041376687,
+                "avg_stds": 0.38395553129784604,
+                "std_stds": 0.013960638025072778,
+                "avg_sparsity": 0.23429198119234532,
+                "std_sparsity": 0.018914684660504916
+            },
+            "network.linear_1": {
+                "avg_means": 0.46224274280223443,
+                "std_means": 0.022443650168172496,
+                "avg_stds": 0.3722774024973524,
+                "std_stds": 0.013552563268827398,
+                "avg_sparsity": 0.06848125984060004,
+                "std_sparsity": 0.01432493871811787
+            },
+            "network.activation_1": {
+                "avg_means": 0.46224274280223443,
+                "std_means": 0.022443650168172496,
+                "avg_stds": 0.3722774024973524,
+                "std_stds": 0.013552563268827398,
+                "avg_sparsity": 0.06848125984060004,
+                "std_sparsity": 0.01432493871811787
+            },
+            "network.linear_2": {
+                "avg_means": 0.468476653733152,
+                "std_means": 0.020691565031516895,
+                "avg_stds": 0.36400291513889393,
+                "std_stds": 0.01217008445819233,
+                "avg_sparsity": 0.07106525474723349,
+                "std_sparsity": 0.012648432715911376
+            }
+        }
+    }
+}
