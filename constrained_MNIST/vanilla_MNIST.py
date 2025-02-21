@@ -16,9 +16,9 @@ def run_vanilla_experiment(
     if plot_config is None:
         plot_config = PlotConfig(
             training_curves=True,
-            weight_distributions=True,
+            weight_distributions=False,
             learning_curves=True,
-            experiment_comparison=True,
+            experiment_comparison=False,
             save_format='png',
             dpi=300
         )
@@ -75,7 +75,7 @@ def main():
             'hidden_dims': [512, 256, 128, 64],
             'dropout_prob': x/100,
             'epochs': 10  # Reduced epochs for faster testing
-        } for x in range(0, 50, 10)  # Test dropout from 0% to 40% in steps of 10%
+        } for x in range(0, 20, 10)  # Test dropout from 0% to 40% in steps of 10%
     ]
     
     # Run each configuration
