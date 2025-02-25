@@ -76,9 +76,36 @@ class BaseMLP(nn.Module):
         for idx, hidden_dim in enumerate(hidden_dims):
             layer = layer_class(prev_dim, hidden_dim, **layer_kwargs)
             layers.append((f"linear_{idx}", layer))
-            # Use provided activation or default to ReLU
-            act = activation if activation is not None else nn.ReLU()
-            layers.append((f"activation_{idx}", act))
+            
+            # Only add activation if one is specified
+            if activation is not None:
+                # Create a NEW activation instance for each layer to ensure unique hooks
+                # Create a new instance of the same class
+                activation_class = activation.__class__
+                
+                # Handle specific activation types properly
+                if activation_class.__name__ == 'SparseMax':
+                    # SparseMax doesn't require any init parameters
+                    act = activation_class()
+                elif activation_class.__name__ == 'PowerNormalization':
+                    # Copy the specific parameters for PowerNormalization
+                    if hasattr(activation, 'power'):
+                        act = activation_class(power=activation.power)
+                    else:
+                        act = activation_class()
+                elif activation_class.__name__ == 'RescaledReLU':
+                    # Copy the scale parameter if it exists
+                    if hasattr(activation, 'scale'):
+                        act = activation_class(scale=activation.scale)
+                    else:
+                        act = activation_class()
+                else:
+                    # Default for standard activations
+                    act = activation_class()
+                
+                # Add the activation to the network
+                layers.append((f"activation_{idx}", act))
+            
             if dropout_prob > 0:
                 layers.append((f"dropout_{idx}", nn.Dropout(dropout_prob)))
             prev_dim = hidden_dim
@@ -96,11 +123,30 @@ class BaseMLP(nn.Module):
     
     def setup_activation_hooks(self):
         """Setup hooks to store activations during forward pass"""
+        from torch.nn.modules.activation import ReLU, LeakyReLU, Sigmoid, Tanh, ELU, GELU
+        
         for name, module in self.named_modules():
-            if isinstance(module, (nn.Linear, BaseLayer, nn.ReLU)):
-                module.register_forward_hook(
-                    lambda m, i, o, name=name: self.activation_store.store_activation(name, m, i, o)
-                )
+            # Create hooks for linear layers and activations
+            if isinstance(module, (nn.Linear, BaseLayer)):
+                # Create a hook for linear/layer
+                def make_hook(layer_name):
+                    def hook(module, input, output):
+                        self.activation_store.store_activation(f"{layer_name}_preact", module, input, output)
+                    return hook
+                
+                # Register the hook
+                module.register_forward_hook(make_hook(name))
+            
+            # For activation layers
+            elif 'activation_' in name:
+                # Create a hook for the activation
+                def make_hook(layer_name):
+                    def hook(module, input, output):
+                        self.activation_store.store_activation(f"{layer_name}_postact", module, input, output)
+                    return hook
+                
+                # Register the hook
+                module.register_forward_hook(make_hook(name))
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the network"""

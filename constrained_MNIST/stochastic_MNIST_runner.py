@@ -5,6 +5,7 @@ from stochastic_layer import StochasticLayer
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
 
 class SimplexMNISTTrainer(MNISTTrainer):
     """Extended MNIST trainer that normalizes inputs to lie on the simplex"""
@@ -14,24 +15,72 @@ class SimplexMNISTTrainer(MNISTTrainer):
         Normalize input images to lie on the probability simplex.
         Each image is normalized so its pixels sum to 1 and are non-negative.
         """
-        # Ensure non-negativity (should already be true for MNIST)
-        x = F.relu(x)
-        # Flatten images
+        # Flatten images first
         x = x.view(x.size(0), -1)
+        
+        # Shift values to make them non-negative (per example)
+        # Find minimum value for each example and subtract it
+        min_vals, _ = torch.min(x, dim=1, keepdim=True)
+        x = x - min_vals
+        
+        # Add small epsilon to avoid division by zero
+        x = x + 1e-8
         # Normalize each image to sum to 1
-        return x / (x.sum(dim=1, keepdim=True) + 1e-8)
+        return x / x.sum(dim=1, keepdim=True)
 
-    def train_step(self, batch):
-        """Override train step to normalize inputs"""
-        images, labels = batch
-        images = self._normalize_to_simplex(images)
-        return super().train_step((images, labels))
+    def train_epoch(self):
+        """Override train_epoch to normalize inputs"""
+        self.model.train()
+        total_loss = 0
+        correct = 0
+        total = 0
+        
+        for data, target in tqdm(self.train_loader, leave=False):
+            data, target = data.to(self.device), target.to(self.device)
+            
+            # Apply simplex normalization
+            data = self._normalize_to_simplex(data)
+            
+            self.optimizer.zero_grad()
+            output = self.model(data)
+            loss = self.criterion(output, target)
+            
+            loss.backward()
+            self.optimizer.step()
+            
+            total_loss += loss.item()
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+            total += target.size(0)
+        
+        avg_loss = total_loss / len(self.train_loader)
+        accuracy = 100. * correct / total
+        return avg_loss, accuracy
 
-    def eval_step(self, batch):
-        """Override eval step to normalize inputs"""
-        images, labels = batch
-        images = self._normalize_to_simplex(images)
-        return super().eval_step((images, labels))
+    @torch.no_grad()
+    def evaluate(self, loader):
+        """Override evaluate to normalize inputs"""
+        self.model.eval()
+        total_loss = 0
+        correct = 0
+        total = 0
+        
+        for data, target in loader:
+            data, target = data.to(self.device), target.to(self.device)
+            
+            # Apply simplex normalization
+            data = self._normalize_to_simplex(data)
+            
+            output = self.model(data)
+            
+            total_loss += self.criterion(output, target).item()
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+            total += target.size(0)
+        
+        avg_loss = total_loss / len(loader)
+        accuracy = 100. * correct / total
+        return avg_loss, accuracy
 
 def run_stochastic_experiment(
     hidden_dims=[512, 256, 128, 64],
@@ -110,18 +159,19 @@ def main():
     # Define activation functions to test
     activations = [
         (None, None),  # No activation (just stochastic layers)
+        # (PowerNormalization, None),
         (SparseMax, None)
     ]
     
     # Test different network architectures
     architectures = [
-        [512],          # Single layer
-        [512, 256],     # Two layers
+        # [512],          # Single layer
+        # [512, 256],     # Two layers
         [512, 256, 128] # Three layers
     ]
     
     # Test different temperatures for the stochastic layer
-    temperatures = [0.01, 0.1, 1.0, 0.5]  # Lower temperatures for sharper distributions
+    temperatures = [0.01]#, 0.1, 0.5, 1.0]  # Lower temperatures for sharper distributions
     
     results = []
     

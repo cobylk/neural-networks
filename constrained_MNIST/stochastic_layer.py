@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from base_MLP import BaseLayer
+from jaxtyping import Float, Int
 
 class StochasticLayer(BaseLayer):
     """
@@ -35,9 +36,9 @@ class StochasticLayer(BaseLayer):
     
     def get_stochastic_weights(self):
         """Convert raw weights to stochastic matrix using softmax"""
-        return F.softmax(self.raw_weight / self.temperature, dim=1)
+        return F.softmax(self.raw_weight / self.temperature, dim=0)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Float[torch.Tensor, "... in_features"]) -> Float[torch.Tensor, "... out_features"]:
         """
         Forward pass ensuring stochastic properties are maintained.
         
@@ -49,7 +50,15 @@ class StochasticLayer(BaseLayer):
             torch.Tensor: Output tensor guaranteed to be on the probability simplex
         """
         # Get stochastic weights through softmax
+        if not torch.all(x >= 0) or not torch.allclose(
+            x.sum(dim=-1), torch.ones_like(x.sum(dim=-1))
+        ):
+            raise ValueError(
+                "Input must be positive and sum to 1 along the features dimension."
+            )
         stochastic_weights = self.get_stochastic_weights()
-        
+        # print(f"before: {torch.min(x)}, {torch.max(x)}")
+        x = F.linear(x, stochastic_weights)
+        # print(f"after: {torch.min(x)}, {torch.max(x)}")
         # Apply the stochastic transformation
-        return F.linear(x, stochastic_weights) 
+        return x

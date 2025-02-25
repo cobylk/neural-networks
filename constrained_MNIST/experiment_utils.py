@@ -219,7 +219,23 @@ class ModelAnalyzer:
                     'min': float(param.min()),
                     'max': float(param.max()),
                     'norm': float(param.norm()),
-                    'sparsity': float((param == 0).float().mean())
+                    'sparsity': float((param == 0).float().mean()),
+                    'has_negative': float((param < 0).float().mean()) > 0,
+                    'percent_negative': float((param < 0).float().mean() * 100),
+                    'shape': list(param.shape),
+                    'num_params': param.numel()
+                }
+                stats[name] = layer_stats
+            elif 'bias' in name:
+                layer_stats = {
+                    'mean': float(param.mean()),
+                    'std': float(param.std()),
+                    'min': float(param.min()),
+                    'max': float(param.max()),
+                    'has_negative': float((param < 0).float().mean()) > 0,
+                    'percent_negative': float((param < 0).float().mean() * 100),
+                    'shape': list(param.shape),
+                    'num_params': param.numel()
                 }
                 stats[name] = layer_stats
         return stats
@@ -245,14 +261,194 @@ class ModelAnalyzer:
             axes[idx].set_title(f'{name} Distribution')
             axes[idx].set_xlabel('Weight Value')
             axes[idx].set_ylabel('Count')
+            # Add vertical line at 0
+            axes[idx].axvline(x=0, color='r', linestyle='--', alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+        
+    def plot_activation_distributions(self, loader: DataLoader, num_batches: int = 5):
+        """Plot distributions of pre-activations and post-activations to diagnose issues"""
+        if not self.plot_config.weight_distributions:  # Reuse the same config flag
+            return None
+            
+        self.model.enable_activation_storage()
+        all_activations = {}
+        all_stats = {}  # To store statistics for each activation
+        
+        # Get a list of activation class names to check for
+        activation_class_types = ['relu', 'activation', 'sparsemax', 'softmax', 'powerrelu', 
+                               'powernormalization', 'layerwisesoftmax', 'rescaledrelu',
+                               'temperaturepowernorm', 'dropout']
+        
+        # Collect activations from a few batches
+        with torch.no_grad():
+            for i, (data, _) in enumerate(loader):
+                if i >= num_batches:
+                    break
+                data = data.to(self.device)
+                _ = self.model(data)
+                
+                # Store activations by type
+                for name, activation in self.model.activation_store.activations.items():
+                    if name not in all_activations:
+                        all_activations[name] = []
+                        all_stats[name] = {
+                            'mins': [], 'maxs': [], 'means': [], 'stds': [], 
+                            'sums': [], 'sparsity': []
+                        }
+                    
+                    # Store a sample to avoid memory issues
+                    sample = activation.detach().cpu().flatten()[:1000]
+                    all_activations[name].append(sample)
+                    
+                    # Compute batch statistics
+                    all_stats[name]['mins'].append(float(activation.min()))
+                    all_stats[name]['maxs'].append(float(activation.max()))
+                    all_stats[name]['means'].append(float(activation.mean()))
+                    all_stats[name]['stds'].append(float(activation.std()))
+                    all_stats[name]['sums'].append(float(activation.sum()))
+                    all_stats[name]['sparsity'].append(float((activation == 0).float().mean()))
+        
+        # Compute average statistics
+        for name in all_stats:
+            # Get a fixed list of stats before iteration to avoid the "dictionary changed size during iteration" error
+            stats_to_process = list(all_stats[name].keys())
+            for stat in stats_to_process:
+                all_stats[name][f'avg_{stat}'] = np.mean(all_stats[name][stat])
+        
+        # Categorize by module type using the same logic as compute_activation_stats
+        pre_activations = {}
+        post_activations = {}
+        other_activations = {}
+        
+        for name in all_activations:
+            if any(module_type.lower() in name.lower() for module_type in activation_class_types):
+                post_activations[name] = all_activations[name]
+            elif 'linear' in name.lower() or 'layer' in name.lower():
+                pre_activations[name] = all_activations[name]
+            else:
+                other_activations[name] = all_activations[name]
+        
+        # Print debug info
+        if len(post_activations) == 0:
+            print("Warning: No post-activation modules detected. Available module names:")
+            for name in all_activations:
+                print(f"  - {name}")
+                
+        # Create subplots based on what we found
+        num_plots = len(pre_activations) + len(post_activations) + len(other_activations)
+        if num_plots == 0:
+            return None
+            
+        fig, axes = plt.subplots(num_plots, 1, figsize=(10, 3*num_plots))
+        if num_plots == 1:
+            axes = [axes]
+            
+        plot_idx = 0
+        
+        # Helper function to create annotation text
+        def create_annotation(name, all_acts):
+            stats = all_stats[name]
+            mean_val = stats['avg_means']
+            std_val = stats['avg_stds']
+            min_val = stats['avg_mins']
+            max_val = stats['avg_maxs']
+            sum_val = stats['avg_sums']
+            neg_pct = (all_acts < 0).mean() * 100
+            zero_pct = (all_acts == 0).mean() * 100
+            sum_one_pct = 100 * np.mean(np.abs(all_acts.reshape(-1, 1000).sum(axis=1) - 1.0) < 0.01)
+            
+            result = (f'Mean: {mean_val:.4f}, Std: {std_val:.4f}\n'
+                     f'Min: {min_val:.4f}, Max: {max_val:.4f}\n'
+                     f'Avg Sum: {sum_val:.4f}\n'
+                     f'Negative: {neg_pct:.1f}%, Zero: {zero_pct:.1f}%')
+            
+            # Add simplex info for stochastic/probability layers
+            if 'stochastic' in name.lower() or 'sparsemax' in name.lower() or 'softmax' in name.lower():
+                result += f'\nSums to 1: {sum_one_pct:.1f}%'
+                
+            return result
+        
+        # Plot pre-activations (Linear outputs)
+        for name, acts in pre_activations.items():
+            all_acts = torch.cat(acts, dim=0).numpy()
+            sns.histplot(all_acts, ax=axes[plot_idx], bins=50, color='blue', alpha=0.7)
+            axes[plot_idx].set_title(f'Pre-Activation: {name}')
+            axes[plot_idx].set_xlabel('Activation Value')
+            axes[plot_idx].set_ylabel('Count')
+            axes[plot_idx].axvline(x=0, color='r', linestyle='--', alpha=0.5)
+            
+            # Add stats annotation
+            annotation_text = create_annotation(name, all_acts)
+            axes[plot_idx].annotate(
+                annotation_text,
+                xy=(0.02, 0.95), xycoords='axes fraction',
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+                va='top'
+            )
+            plot_idx += 1
+            
+        # Plot post-activations (ReLU, SparseMax, etc. outputs)
+        for name, acts in post_activations.items():
+            all_acts = torch.cat(acts, dim=0).numpy()
+            sns.histplot(all_acts, ax=axes[plot_idx], bins=50, color='green', alpha=0.7)
+            axes[plot_idx].set_title(f'Post-Activation: {name}')
+            axes[plot_idx].set_xlabel('Activation Value')
+            axes[plot_idx].set_ylabel('Count')
+            axes[plot_idx].axvline(x=0, color='r', linestyle='--', alpha=0.5)
+            
+            # Add stats annotation
+            annotation_text = create_annotation(name, all_acts)
+            axes[plot_idx].annotate(
+                annotation_text,
+                xy=(0.02, 0.95), xycoords='axes fraction',
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+                va='top'
+            )
+            
+            # Add warning if ReLU has negative values (which should be impossible)
+            min_val = all_stats[name]['avg_mins']
+            if min_val < 0 and 'relu' in name.lower():
+                axes[plot_idx].annotate(
+                    "WARNING: ReLU output has negative values!",
+                    xy=(0.5, 0.5), xycoords='axes fraction', fontsize=12,
+                    color='red', ha='center', va='center',
+                    bbox=dict(boxstyle="round,pad=0.3", fc="yellow", alpha=0.8)
+                )
+            plot_idx += 1
+            
+        # Plot other activations
+        for name, acts in other_activations.items():
+            all_acts = torch.cat(acts, dim=0).numpy()
+            sns.histplot(all_acts, ax=axes[plot_idx], bins=50, color='purple', alpha=0.7)
+            axes[plot_idx].set_title(f'Other: {name}')
+            axes[plot_idx].set_xlabel('Value')
+            axes[plot_idx].set_ylabel('Count')
+            axes[plot_idx].axvline(x=0, color='r', linestyle='--', alpha=0.5)
+            
+            # Add stats annotation
+            annotation_text = create_annotation(name, all_acts)
+            axes[plot_idx].annotate(
+                annotation_text,
+                xy=(0.02, 0.95), xycoords='axes fraction',
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+                va='top'
+            )
+            plot_idx += 1
         
         plt.tight_layout()
         return fig
     
     def compute_activation_stats(self, loader: DataLoader) -> Dict[str, Dict[str, float]]:
         """Compute activation statistics across a dataset"""
-        self.model.store_activations = True
-        activation_stats = defaultdict(lambda: {'means': [], 'stds': [], 'sparsity': []})
+        self.model.enable_activation_storage()
+        activation_stats = defaultdict(lambda: {'means': [], 'stds': [], 'sparsity': [], 'mins': [], 'maxs': [], 'sums': []})
+        
+        # Get a list of activation class names to check for
+        activation_class_types = ['relu', 'activation', 'sparsemax', 'softmax', 'powerrelu', 
+                                  'powernormalization', 'layerwisesoftmax', 'rescaledrelu',
+                                  'temperaturepowernorm', 'dropout']
         
         with torch.no_grad():
             for data, _ in tqdm(loader, desc="Computing activation stats"):
@@ -260,17 +456,43 @@ class ModelAnalyzer:
                 _ = self.model(data)
                 
                 for name, activation in self.model.activation_store.activations.items():
-                    activation_stats[name]['means'].append(float(activation.mean()))
-                    activation_stats[name]['stds'].append(float(activation.std()))
-                    activation_stats[name]['sparsity'].append(float((activation == 0).float().mean()))
+                    # More robust classification logic
+                    if any(module_type.lower() in name.lower() for module_type in activation_class_types):
+                        name_key = f"post_activation:{name}"  # Any activation function output
+                    elif 'linear' in name.lower() or 'layer' in name.lower():
+                        name_key = f"pre_activation:{name}"  # Linear/layer output (pre-activation)
+                    else:
+                        # Better debug output to identify unclassified modules
+                        print(f"Warning: Unclassified module type: {name}")
+                        name_key = f"unknown:{name}"  # Other module outputs
+                        
+                    activation_stats[name_key]['means'].append(float(activation.mean()))
+                    activation_stats[name_key]['stds'].append(float(activation.std()))
+                    activation_stats[name_key]['sparsity'].append(float((activation == 0).float().mean()))
+                    activation_stats[name_key]['mins'].append(float(activation.min()))
+                    activation_stats[name_key]['maxs'].append(float(activation.max()))
+                    activation_stats[name_key]['sums'].append(float(activation.sum()))
         
         # Compute aggregate statistics
-        for name in activation_stats:
-            for stat in ['means', 'stds', 'sparsity']:
+        for name in list(activation_stats.keys()):  # Use list to avoid modification during iteration
+            for stat in ['means', 'stds', 'sparsity', 'mins', 'maxs', 'sums']:
                 values = activation_stats[name][stat]
-                activation_stats[name][f'avg_{stat}'] = float(np.mean(values))
-                activation_stats[name][f'std_{stat}'] = float(np.std(values))
+                if stat == 'sums':
+                    # Calculate average sum
+                    activation_stats[name]['avg_sum'] = float(np.mean(values))
+                else:
+                    # For means, stds, sparsity, mins, maxs - calculate average and std
+                    activation_stats[name][f'avg_{stat}'] = float(np.mean(values))
+                    activation_stats[name][f'std_{stat}'] = float(np.std(values))
                 del activation_stats[name][stat]
+                
+        # Add validation for ReLU activations - they should never be negative
+        for name in list(activation_stats.keys()):
+            if 'post_activation' in name and 'relu' in name.lower():
+                if activation_stats[name]['avg_means'] < 0 or activation_stats[name]['avg_mins'] < 0:
+                    print(f"WARNING: Found negative values in ReLU activation: {name}")
+                    print(f"  Min: {activation_stats[name]['avg_mins']}, Mean: {activation_stats[name]['avg_means']}")
+                    activation_stats[f"{name}_WARNING"] = "ReLU activations should never be negative!"
         
         return dict(activation_stats)
 
@@ -577,5 +799,14 @@ class MNISTTrainer:
                 dpi=self.plot_config.dpi
             )
             plt.close(weight_dist_fig)
+        
+        # Save activation distribution plot
+        act_dist_fig = self.analyzer.plot_activation_distributions(self.val_loader, num_batches=3)
+        if act_dist_fig:
+            act_dist_fig.savefig(
+                self.run_dir / f'activation_distributions.{self.plot_config.save_format}',
+                dpi=self.plot_config.dpi
+            )
+            plt.close(act_dist_fig)
         
         print(f'Results saved in: {self.run_dir}')

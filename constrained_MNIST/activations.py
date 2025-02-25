@@ -64,25 +64,18 @@ class SparseMax(nn.Module):
         super().__init__()
         
     def forward(self, x):
-        # Sort input in descending order
         sorted_x, _ = torch.sort(x, dim=1, descending=True)
         
-        # Calculate cumulative sums
         cum_sums = torch.cumsum(sorted_x, dim=1)
         
-        # Calculate indices for thresholding
         k = torch.arange(1, x.shape[1] + 1, device=x.device, dtype=x.dtype)
         k = k.view(1, -1)
         
-        # Calculate threshold values
         threshold_values = (cum_sums - 1) / k
         
-        # Find the last position where threshold_values > sorted_x
         rho = torch.sum(sorted_x > threshold_values, dim=1)
         
-        # Calculate final threshold
         threshold = threshold_values[torch.arange(x.shape[0]), (rho - 1).clamp(min=0)]
         
-        # Apply projection
         return torch.maximum(x - threshold.unsqueeze(1), torch.zeros_like(x))
 
