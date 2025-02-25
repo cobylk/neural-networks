@@ -202,11 +202,14 @@ class ModelAnalyzer:
         self, 
         model: BaseMLP, 
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
-        plot_config: Optional[PlotConfig] = None
+        plot_config: Optional[PlotConfig] = None,
+        input_preprocessor: Optional[callable] = None
     ):
         self.model = model
         self.device = device
         self.plot_config = plot_config or PlotConfig()
+        # Store the input preprocessor function, if provided
+        self.input_preprocessor = input_preprocessor
         
     def analyze_weights(self) -> Dict[str, Dict[str, float]]:
         """Analyze weight statistics for each layer"""
@@ -276,17 +279,17 @@ class ModelAnalyzer:
         all_activations = {}
         all_stats = {}  # To store statistics for each activation
         
-        # Get a list of activation class names to check for
-        activation_class_types = ['relu', 'activation', 'sparsemax', 'softmax', 'powerrelu', 
-                               'powernormalization', 'layerwisesoftmax', 'rescaledrelu',
-                               'temperaturepowernorm', 'dropout']
-        
         # Collect activations from a few batches
         with torch.no_grad():
             for i, (data, _) in enumerate(loader):
                 if i >= num_batches:
                     break
                 data = data.to(self.device)
+                
+                # Apply preprocessing if available
+                if self.input_preprocessor is not None:
+                    data = self.input_preprocessor(data)
+                
                 _ = self.model(data)
                 
                 # Store activations by type
@@ -317,15 +320,15 @@ class ModelAnalyzer:
             for stat in stats_to_process:
                 all_stats[name][f'avg_{stat}'] = np.mean(all_stats[name][stat])
         
-        # Categorize by module type using the same logic as compute_activation_stats
+        # Categorize activations based on the new naming convention
         pre_activations = {}
         post_activations = {}
         other_activations = {}
         
         for name in all_activations:
-            if any(module_type.lower() in name.lower() for module_type in activation_class_types):
+            if '_postact' in name:
                 post_activations[name] = all_activations[name]
-            elif 'linear' in name.lower() or 'layer' in name.lower():
+            elif '_preact' in name:
                 pre_activations[name] = all_activations[name]
             else:
                 other_activations[name] = all_activations[name]
@@ -445,26 +448,26 @@ class ModelAnalyzer:
         self.model.enable_activation_storage()
         activation_stats = defaultdict(lambda: {'means': [], 'stds': [], 'sparsity': [], 'mins': [], 'maxs': [], 'sums': []})
         
-        # Get a list of activation class names to check for
-        activation_class_types = ['relu', 'activation', 'sparsemax', 'softmax', 'powerrelu', 
-                                  'powernormalization', 'layerwisesoftmax', 'rescaledrelu',
-                                  'temperaturepowernorm', 'dropout']
-        
         with torch.no_grad():
             for data, _ in tqdm(loader, desc="Computing activation stats"):
                 data = data.to(self.device)
+                
+                # Apply preprocessing if available
+                if self.input_preprocessor is not None:
+                    data = self.input_preprocessor(data)
+                
                 _ = self.model(data)
                 
                 for name, activation in self.model.activation_store.activations.items():
-                    # More robust classification logic
-                    if any(module_type.lower() in name.lower() for module_type in activation_class_types):
+                    # Classify based on the modified naming convention
+                    if '_postact' in name:
                         name_key = f"post_activation:{name}"  # Any activation function output
-                    elif 'linear' in name.lower() or 'layer' in name.lower():
+                    elif '_preact' in name:
                         name_key = f"pre_activation:{name}"  # Linear/layer output (pre-activation)
                     else:
-                        # Better debug output to identify unclassified modules
+                        # For backwards compatibility and unspecified hooks
                         print(f"Warning: Unclassified module type: {name}")
-                        name_key = f"unknown:{name}"  # Other module outputs
+                        name_key = f"unknown:{name}"
                         
                     activation_stats[name_key]['means'].append(float(activation.mean()))
                     activation_stats[name_key]['stds'].append(float(activation.std()))
@@ -472,7 +475,7 @@ class ModelAnalyzer:
                     activation_stats[name_key]['mins'].append(float(activation.min()))
                     activation_stats[name_key]['maxs'].append(float(activation.max()))
                     activation_stats[name_key]['sums'].append(float(activation.sum()))
-        
+                    
         # Compute aggregate statistics
         for name in list(activation_stats.keys()):  # Use list to avoid modification during iteration
             for stat in ['means', 'stds', 'sparsity', 'mins', 'maxs', 'sums']:
@@ -509,7 +512,8 @@ class MNISTTrainer:
         optimizer_kwargs: Dict = None,
         criterion: nn.Module = nn.CrossEntropyLoss(),
         tags: List[str] = None,
-        plot_config: Optional[PlotConfig] = None
+        plot_config: Optional[PlotConfig] = None,
+        preprocess_fn: Optional[callable] = None
     ):
         self.model = model.to(device)
         self.device = device
@@ -520,6 +524,7 @@ class MNISTTrainer:
         self.optimizer_class = optimizer_class
         self.optimizer_kwargs = optimizer_kwargs or {}
         self.criterion = criterion
+        self.preprocess_fn = preprocess_fn
         
         # Generate unique run name with timestamp
         timestamp = datetime.now().strftime("%m%d%H%M%S")
@@ -572,7 +577,8 @@ class MNISTTrainer:
                         'parameters': optimizer_kwargs
                     },
                     'criterion': criterion.__class__.__name__,
-                    'device': device
+                    'device': device,
+                    'preprocess_fn': preprocess_fn.__name__ if preprocess_fn else None
                 },
                 
                 # Dataset information
@@ -595,7 +601,14 @@ class MNISTTrainer:
         
         self.tags = tags or []
         self.plot_config = plot_config or PlotConfig()
-        self.analyzer = ModelAnalyzer(model, device, plot_config=self.plot_config)
+        
+        # Setup analyzer with the same preprocessing function if available
+        self.analyzer = ModelAnalyzer(
+            model, 
+            device, 
+            plot_config=self.plot_config,
+            input_preprocessor=self.preprocess_fn
+        )
         
         # Update metadata with tags
         self.history['metadata']['tags'] = self.tags
@@ -625,6 +638,12 @@ class MNISTTrainer:
         
         return train_loader, val_loader, test_loader
     
+    def preprocess_data(self, data):
+        """Apply preprocessing to input data if a preprocessing function is defined"""
+        if self.preprocess_fn is not None:
+            return self.preprocess_fn(data)
+        return data
+    
     def train_epoch(self) -> Tuple[float, float]:
         """Train for one epoch"""
         self.model.train()
@@ -634,6 +653,9 @@ class MNISTTrainer:
         
         for data, target in tqdm(self.train_loader, leave=False):
             data, target = data.to(self.device), target.to(self.device)
+            
+            # Apply data preprocessing if defined
+            data = self.preprocess_data(data)
             
             self.optimizer.zero_grad()
             output = self.model(data)
@@ -661,6 +683,10 @@ class MNISTTrainer:
         
         for data, target in loader:
             data, target = data.to(self.device), target.to(self.device)
+            
+            # Apply data preprocessing if defined
+            data = self.preprocess_data(data)
+            
             output = self.model(data)
             
             total_loss += self.criterion(output, target).item()
@@ -755,6 +781,9 @@ class MNISTTrainer:
         # Add weight analysis
         weight_stats = self.analyzer.analyze_weights()
         self.history['metadata']['weight_analysis'] = weight_stats
+        
+        # Ensure that the analyzer uses the same preprocessing function
+        self.analyzer.input_preprocessor = self.preprocess_fn
         
         # Compute and save activation statistics
         activation_stats = self.analyzer.compute_activation_stats(self.val_loader)

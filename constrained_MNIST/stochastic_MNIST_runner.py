@@ -10,7 +10,8 @@ from tqdm import tqdm
 class SimplexMNISTTrainer(MNISTTrainer):
     """Extended MNIST trainer that normalizes inputs to lie on the simplex"""
     
-    def _normalize_to_simplex(self, x):
+    @staticmethod
+    def _normalize_to_simplex(x):
         """
         Normalize input images to lie on the probability simplex.
         Each image is normalized so its pixels sum to 1 and are non-negative.
@@ -24,63 +25,9 @@ class SimplexMNISTTrainer(MNISTTrainer):
         x = x - min_vals
         
         # Add small epsilon to avoid division by zero
-        x = x + 1e-8
+        # x = x + 1e-8
         # Normalize each image to sum to 1
-        return x / x.sum(dim=1, keepdim=True)
-
-    def train_epoch(self):
-        """Override train_epoch to normalize inputs"""
-        self.model.train()
-        total_loss = 0
-        correct = 0
-        total = 0
-        
-        for data, target in tqdm(self.train_loader, leave=False):
-            data, target = data.to(self.device), target.to(self.device)
-            
-            # Apply simplex normalization
-            data = self._normalize_to_simplex(data)
-            
-            self.optimizer.zero_grad()
-            output = self.model(data)
-            loss = self.criterion(output, target)
-            
-            loss.backward()
-            self.optimizer.step()
-            
-            total_loss += loss.item()
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
-            total += target.size(0)
-        
-        avg_loss = total_loss / len(self.train_loader)
-        accuracy = 100. * correct / total
-        return avg_loss, accuracy
-
-    @torch.no_grad()
-    def evaluate(self, loader):
-        """Override evaluate to normalize inputs"""
-        self.model.eval()
-        total_loss = 0
-        correct = 0
-        total = 0
-        
-        for data, target in loader:
-            data, target = data.to(self.device), target.to(self.device)
-            
-            # Apply simplex normalization
-            data = self._normalize_to_simplex(data)
-            
-            output = self.model(data)
-            
-            total_loss += self.criterion(output, target).item()
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
-            total += target.size(0)
-        
-        avg_loss = total_loss / len(loader)
-        accuracy = 100. * correct / total
-        return avg_loss, accuracy
+        return x / 10# / x.sum(dim=1, keepdim=True)
 
 def run_stochastic_experiment(
     hidden_dims=[512, 256, 128, 64],
@@ -146,7 +93,8 @@ def run_stochastic_experiment(
         tags=[
             f'stochastic_layers_{len(hidden_dims)}',
             f'activation_{activation_name}'
-        ]
+        ],
+        preprocess_fn=SimplexMNISTTrainer._normalize_to_simplex
     )
     
     # Train model

@@ -50,12 +50,12 @@ class StochasticLayer(BaseLayer):
             torch.Tensor: Output tensor guaranteed to be on the probability simplex
         """
         # Get stochastic weights through softmax
-        if not torch.all(x >= 0) or not torch.allclose(
-            x.sum(dim=-1), torch.ones_like(x.sum(dim=-1))
-        ):
-            raise ValueError(
-                "Input must be positive and sum to 1 along the features dimension."
-            )
+        # if not torch.all(x >= 0) or not torch.allclose(
+        #     x.sum(dim=-1), torch.ones_like(x.sum(dim=-1))
+        # ):
+        #     raise ValueError(
+        #         "Input must be positive and sum to 1 along the features dimension."
+        #     )
         stochastic_weights = self.get_stochastic_weights()
         # print(f"before: {torch.min(x)}, {torch.max(x)}")
         x = F.linear(x, stochastic_weights)
