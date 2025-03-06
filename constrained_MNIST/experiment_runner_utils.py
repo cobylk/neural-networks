@@ -8,6 +8,7 @@ This module provides utilities for managing MNIST experiments, including:
 """
 
 from typing import List, Dict, Any, Tuple, Type, Optional, Union, Callable
+import types
 import torch
 import torch.nn as nn
 import pandas as pd
@@ -191,7 +192,19 @@ class ExperimentTracker:
             columns: List of column names to track (keys in result dictionaries)
         """
         self.results = []
-        self.columns = columns or ['experiment', 'activation', 'test_acc', 'train_acc']
+        # Only set default columns if none provided
+        if columns is None:
+            # We'll dynamically extend these based on the actual results
+            self.columns = [
+                'experiment', 
+                'activation', 
+                'architecture', 
+                'temperature',
+                'test_acc', 
+                'train_acc'
+            ]
+        else:
+            self.columns = columns
     
     def add_result(self, result: Dict[str, Any]) -> None:
         """
@@ -201,6 +214,16 @@ class ExperimentTracker:
             result: Dictionary containing experiment result data
         """
         self.results.append(result)
+        
+        # Update the columns list to include any new activation or layer parameters
+        # This ensures all parameters appear in the summary table
+        for key in result.keys():
+            if key not in self.columns and (
+                key.startswith('activation_') or 
+                key.startswith('layer_') or
+                key in ['temperature', 'dropout_prob']
+            ):
+                self.columns.append(key)
     
     def get_results_df(self) -> pd.DataFrame:
         """
@@ -227,69 +250,82 @@ class ExperimentTracker:
         
         # Default formatting if none provided
         if format_spec is None:
-            format_spec = {
-                'test_acc': {'fmt': '.2f', 'suffix': '%'},
-                'train_acc': {'fmt': '.2f', 'suffix': '%'},
-                'temperature': {'fmt': '.2f'},
-                'dropout_prob': {'fmt': '.2f'}
-            }
+            format_spec = DEFAULT_FORMAT_SPEC
             
         # Generate formatted data
         formatted_data = []
         headers = []
         
-        # Get all keys from first result (in case columns wasn't specified)
-        if not self.columns:
-            self.columns = list(self.results[0].keys())
-        
-        # Generate headers with formatting
+        # First, determine all columns that actually have data
+        all_columns = []
         for col in self.columns:
-            # Skip columns that aren't in any results
-            if not any(col in result for result in self.results):
-                continue
+            # Only include columns that exist in at least one result
+            if any(col in result for result in self.results):
+                all_columns.append(col)
                 
+        # Now generate the headers for these columns
+        for col in all_columns:
             if col in format_spec:
                 formatter = format_spec[col]
                 # Modify header if there's a suffix
                 suffix = formatter.get('suffix', '')
-                headers.append(f"{col.replace('_', ' ').title()}{suffix}")
+                prefix = formatter.get('prefix', '')
+                column_name = col
+                
+                # Format activation_* and layer_* parameter column names for better readability
+                if col.startswith('activation_'):
+                    column_name = col.replace('activation_', '')
+                elif col.startswith('layer_'):
+                    column_name = col.replace('layer_', '')
+                
+                headers.append(f"{prefix}{column_name.replace('_', ' ').title()}{suffix}")
             else:
-                headers.append(col.replace('_', ' ').title())
+                column_name = col
+                # Format activation_* and layer_* parameter column names for better readability
+                if col.startswith('activation_'):
+                    column_name = col.replace('activation_', '')
+                elif col.startswith('layer_'):
+                    column_name = col.replace('layer_', '')
+                    
+                headers.append(column_name.replace('_', ' ').title())
         
         # Format each row of data
         for result in self.results:
             row = []
-            for col in self.columns:
-                # Skip if column not in this result
+            for col in all_columns:
+                # Add empty string if column not in this result
                 if col not in result:
-                    continue
+                    row.append("")
+                else:
+                    value = result[col]
                     
-                value = result[col]
-                
-                # Apply formatting if specified
-                if col in format_spec:
-                    formatter = format_spec[col]
-                    fmt = formatter.get('fmt', '')
-                    prefix = formatter.get('prefix', '')
-                    suffix = formatter.get('suffix', '')
-                    
-                    # Handle different value types
-                    if isinstance(value, (int, float)):
-                        formatted = f"{prefix}{value:{fmt}}{suffix}"
-                    elif isinstance(value, list):
-                        formatted = str(value)
+                    # Apply formatting if specified
+                    if col in format_spec:
+                        formatter = format_spec[col]
+                        fmt = formatter.get('fmt', '')
+                        prefix = formatter.get('prefix', '')
+                        suffix = formatter.get('suffix', '')
+                        
+                        # Handle different value types
+                        if isinstance(value, (int, float)):
+                            formatted = f"{prefix}{value:{fmt}}{suffix}"
+                        elif isinstance(value, list):
+                            formatted = str(value)
+                        else:
+                            formatted = str(value)
                     else:
                         formatted = str(value)
-                else:
-                    formatted = str(value)
-                
-                row.append(formatted)
+                    
+                    row.append(formatted)
             
             formatted_data.append(row)
         
         # Print table
         print("\nExperiment Summary:")
         print(tabulate(formatted_data, headers=headers, tablefmt=tablefmt))
+        
+        # Also return the DataFrame for further analysis if needed
+        return pd.DataFrame(data=formatted_data, columns=headers)
 
 
 class ExperimentDefinition:
@@ -350,229 +386,19 @@ class ExperimentRunner:
         self.experiment_def = experiment_def
         self.tracker = ExperimentTracker()
     
-    def run_activation_experiments(self, 
-                                   activations: List[Tuple],
-                                   result_keys: List[str] = None) -> ExperimentTracker:
-        """
-        Run experiments with different activations.
-        
-        Args:
-            activations: List of (activation_class, activation_kwargs) tuples
-            result_keys: Keys to extract from history for tracking
-            
-        Returns:
-            ExperimentTracker with results
-        """
-        # Default result keys if none provided
-        result_keys = result_keys or ['test_acc', 'train_acc']
-        
-        for activation_class, activation_kwargs in activations:
-            # Get activation name
-            activation_name = activation_class.__name__ if activation_class else "NoActivation"
-            
-            # Create config for this experiment
-            config = self.experiment_def.create_config({
-                'activation_class': activation_class,
-                'activation_kwargs': activation_kwargs
-            })
-            
-            # Print experiment info
-            print(f"\nRunning experiment with activation: {activation_name}")
-            if activation_kwargs:
-                print(f"Activation parameters: {activation_kwargs}")
-            
-            # Run experiment using unified run_experiment function
-            trainer, history = run_experiment(config)
-            
-            # Create result dictionary
-            result = {
-                'experiment': self.experiment_def.name,
-                'activation': activation_name
-            }
-            
-            # Add activation parameters to result
-            if activation_kwargs:
-                for key, value in activation_kwargs.items():
-                    result[f'activation_{key}'] = value
-            
-            # Add requested history values to result
-            for key in result_keys:
-                if key in history:
-                    # For list values, get the last element
-                    if isinstance(history[key], list) and key != 'hidden_dims':
-                        result[key] = history[key][-1]
-                    else:
-                        result[key] = history[key]
-            
-            # Add result to tracker
-            self.tracker.add_result(result)
-            
-            # Print immediate result
-            print(f"Test accuracy: {history['test_acc']:.2f}%")
-        
-        return self.tracker
-    
-    def run_architecture_experiments(self,
-                                     architectures: List[List[int]],
-                                     activation_params: Dict[str, Any],
-                                     result_keys: List[str] = None) -> ExperimentTracker:
-        """
-        Run experiments with different network architectures.
-        
-        Args:
-            architectures: List of hidden layer dimensions
-            activation_params: Activation parameters to use
-            result_keys: Keys to extract from history for tracking
-            
-        Returns:
-            ExperimentTracker with results
-        """
-        # Default result keys if none provided
-        result_keys = result_keys or ['test_acc', 'train_acc']
-        
-        # Extract activation parameters
-        activation_class = activation_params.get('activation_class')
-        activation_kwargs = activation_params.get('activation_kwargs', {})
-        activation_name = activation_class.__name__ if activation_class else "NoActivation"
-        
-        for hidden_dims in architectures:
-            # Create config for this experiment
-            config = self.experiment_def.create_config({
-                'hidden_dims': hidden_dims,
-                'activation_class': activation_class,
-                'activation_kwargs': activation_kwargs
-            })
-            
-            # Print experiment info
-            print(f"\nRunning experiment with architecture: {hidden_dims}")
-            print(f"Activation: {activation_name}")
-            if activation_kwargs:
-                print(f"Activation parameters: {activation_kwargs}")
-            
-            # Run experiment using unified run_experiment function
-            trainer, history = run_experiment(config)
-            
-            # Create result dictionary
-            result = {
-                'experiment': self.experiment_def.name,
-                'architecture': str(hidden_dims),
-                'activation': activation_name
-            }
-            
-            # Add activation parameters to result
-            if activation_kwargs:
-                for key, value in activation_kwargs.items():
-                    result[f'activation_{key}'] = value
-            
-            # Add requested history values to result
-            for key in result_keys:
-                if key in history:
-                    # For list values, get the last element
-                    if isinstance(history[key], list) and key != 'hidden_dims':
-                        result[key] = history[key][-1]
-                    else:
-                        result[key] = history[key]
-            
-            # Add result to tracker
-            self.tracker.add_result(result)
-            
-            # Print immediate result
-            print(f"Test accuracy: {history['test_acc']:.2f}%")
-        
-        return self.tracker
-    
-    def run_stochastic_temperature_experiments(self,
-                                              temperatures: List[float],
-                                              activation_params: Dict[str, Any],
-                                              hidden_dims: List[int] = None,
-                                              result_keys: List[str] = None) -> ExperimentTracker:
-        """
-        Run experiments with different stochastic layer temperatures.
-        
-        Args:
-            temperatures: List of temperature values
-            activation_params: Activation parameters to use
-            hidden_dims: Hidden layer dimensions (optional)
-            result_keys: Keys to extract from history for tracking
-            
-        Returns:
-            ExperimentTracker with results
-        """
-        # Default result keys if none provided
-        result_keys = result_keys or ['test_acc', 'train_acc']
-        
-        # Extract activation parameters
-        activation_class = activation_params.get('activation_class')
-        activation_kwargs = activation_params.get('activation_kwargs', {})
-        activation_name = activation_class.__name__ if activation_class else "NoActivation"
-        
-        for temp in temperatures:
-            # Create config for this experiment
-            config_params = {
-                'activation_class': activation_class,
-                'activation_kwargs': activation_kwargs,
-                'layer_kwargs': {'temperature': temp}
-            }
-            
-            # Add hidden_dims if provided
-            if hidden_dims:
-                config_params['hidden_dims'] = hidden_dims
-            
-            # Create config
-            config = self.experiment_def.create_config(config_params)
-            
-            # Print experiment info
-            print(f"\nRunning experiment with:")
-            if hidden_dims:
-                print(f"Architecture: {hidden_dims}")
-            print(f"Activation: {activation_name}")
-            print(f"StochasticLayer Temperature: {temp}")
-            if activation_kwargs:
-                print(f"Activation parameters: {activation_kwargs}")
-            
-            # Run experiment using unified run_experiment function
-            trainer, history = run_experiment(config)
-            
-            # Create result dictionary
-            result = {
-                'experiment': self.experiment_def.name,
-                'activation': activation_name,
-                'temperature': temp
-            }
-            
-            # Add architecture if provided
-            if hidden_dims:
-                result['architecture'] = str(hidden_dims)
-            
-            # Add activation parameters to result
-            if activation_kwargs:
-                for key, value in activation_kwargs.items():
-                    result[f'activation_{key}'] = value
-            
-            # Add requested history values to result
-            for key in result_keys:
-                if key in history:
-                    # For list values, get the last element
-                    if isinstance(history[key], list) and key != 'hidden_dims':
-                        result[key] = history[key][-1]
-                    else:
-                        result[key] = history[key]
-            
-            # Add result to tracker
-            self.tracker.add_result(result)
-            
-            # Print immediate result
-            print(f"Test accuracy: {history['test_acc']:.2f}%")
-        
-        return self.tracker
-    
     def run_grid_search(self,
                         activations: List[Tuple] = None,
                         architectures: List[List[int]] = None,
                         temperatures: List[float] = None,
                         result_keys: List[str] = None) -> ExperimentTracker:
         """
-        Run a grid search across multiple parameters.
+        Run a grid search across multiple parameters. This is the main method for running experiments 
+        and can handle all experiment types by adjusting which parameters vary and which remain fixed.
+        
+        Examples:
+        - For activation experiments: provide multiple activations, single architecture, no temperatures
+        - For architecture experiments: provide single activation, multiple architectures, no temperatures
+        - For stochastic temperature experiments: provide single activation, single architecture, multiple temperatures
         
         Args:
             activations: List of (activation_class, activation_kwargs) tuples
@@ -598,21 +424,49 @@ class ExperimentRunner:
                 # For stochastic experiments, also loop through temperatures
                 if self.experiment_def.config_class == StochasticExperimentConfig and temperatures:
                     for temp in temperatures:
+                        # Create layer kwargs with temperature
+                        layer_kwargs = {'temperature': temp}
+                        
                         # Create config for this experiment
                         config = self.experiment_def.create_config({
                             'hidden_dims': hidden_dims,
                             'activation_class': activation_class,
                             'activation_kwargs': activation_kwargs,
-                            'layer_kwargs': {'temperature': temp}
+                            'layer_kwargs': layer_kwargs
                         })
                         
+                        # Get all base configuration parameters
+                        base_config_params = {
+                            key: getattr(config, key) 
+                            for key in dir(config) 
+                            if not key.startswith('_') and not callable(getattr(config, key))
+                            and key not in ['activation_class', 'activation_kwargs', 'layer_kwargs', 'hidden_dims']
+                        }
+                        
                         # Print experiment info
-                        print(f"\nRunning experiment with:")
-                        print(f"Architecture: {hidden_dims}")
-                        print(f"Activation: {activation_name}")
-                        print(f"StochasticLayer Temperature: {temp}")
+                        print(f"\n{'-'*80}")
+                        print(f"Running experiment with:")
+                        print(f"  Architecture: {hidden_dims}")
+                        print(f"  Activation: {activation_name}")
+                        
+                        # Print activation parameters if any
                         if activation_kwargs:
-                            print(f"Activation parameters: {activation_kwargs}")
+                            print(f"  Activation parameters:")
+                            for key, value in activation_kwargs.items():
+                                print(f"    {key}: {value}")
+                                
+                        # Print stochastic layer parameters
+                        print(f"  StochasticLayer parameters:")
+                        for key, value in layer_kwargs.items():
+                            print(f"    {key}: {value}")
+                            
+                        # Print base configuration parameters
+                        print(f"  Configuration parameters:")
+                        for key, value in base_config_params.items():
+                            if not isinstance(value, (type, types.ModuleType)):
+                                print(f"    {key}: {value}")
+                                
+                        print(f"{'-'*80}")
                         
                         # Run experiment using unified run_experiment function
                         trainer, history = run_experiment(config)
@@ -630,6 +484,16 @@ class ExperimentRunner:
                             for key, value in activation_kwargs.items():
                                 result[f'activation_{key}'] = value
                         
+                        # Add layer kwargs to result
+                        for key, value in layer_kwargs.items():
+                            if key != 'temperature':  # We already added this separately
+                                result[f'layer_{key}'] = value
+                        
+                        # Add configuration parameters to result
+                        for key, value in base_config_params.items():
+                            if not isinstance(value, (type, types.ModuleType)):
+                                result[key] = value
+                                
                         # Add requested history values to result
                         for key in result_keys:
                             if key in history:
@@ -652,12 +516,33 @@ class ExperimentRunner:
                         'activation_kwargs': activation_kwargs
                     })
                     
+                    # Get all base configuration parameters
+                    base_config_params = {
+                        key: getattr(config, key) 
+                        for key in dir(config) 
+                        if not key.startswith('_') and not callable(getattr(config, key))
+                        and key not in ['activation_class', 'activation_kwargs', 'layer_kwargs', 'hidden_dims']
+                    }
+                    
                     # Print experiment info
-                    print(f"\nRunning experiment with:")
-                    print(f"Architecture: {hidden_dims}")
-                    print(f"Activation: {activation_name}")
+                    print(f"\n{'-'*80}")
+                    print(f"Running experiment with:")
+                    print(f"  Architecture: {hidden_dims}")
+                    print(f"  Activation: {activation_name}")
+                    
+                    # Print activation parameters if any
                     if activation_kwargs:
-                        print(f"Activation parameters: {activation_kwargs}")
+                        print(f"  Activation parameters:")
+                        for key, value in activation_kwargs.items():
+                            print(f"    {key}: {value}")
+                    
+                    # Print base configuration parameters
+                    print(f"  Configuration parameters:")
+                    for key, value in base_config_params.items():
+                        if not isinstance(value, (type, types.ModuleType)):
+                            print(f"    {key}: {value}")
+                            
+                    print(f"{'-'*80}")
                     
                     # Run experiment using unified run_experiment function
                     trainer, history = run_experiment(config)
@@ -673,6 +558,11 @@ class ExperimentRunner:
                     if activation_kwargs:
                         for key, value in activation_kwargs.items():
                             result[f'activation_{key}'] = value
+                    
+                    # Add configuration parameters to result
+                    for key, value in base_config_params.items():
+                        if not isinstance(value, (type, types.ModuleType)):
+                            result[key] = value
                     
                     # Add requested history values to result
                     for key in result_keys:
@@ -694,11 +584,29 @@ class ExperimentRunner:
 
 # Commonly used format specifications for result display
 DEFAULT_FORMAT_SPEC = {
+    # Performance metrics
     'test_acc': {'fmt': '.2f', 'suffix': '%'},
     'train_acc': {'fmt': '.2f', 'suffix': '%'},
+    'val_acc': {'fmt': '.2f', 'suffix': '%'},
+    'test_loss': {'fmt': '.4f'},
+    'train_loss': {'fmt': '.4f'},
+    'val_loss': {'fmt': '.4f'},
+    
+    # Model parameters
     'temperature': {'fmt': '.2f'},
     'dropout_prob': {'fmt': '.2f'},
-    'initial_threshold': {'fmt': '.4f'},
-    'sharpness': {'fmt': '.1f'},
-    'eps': {'fmt': '.0e'},
+    
+    # Activation parameters
+    'activation_eps': {'fmt': '.1e'},
+    'activation_temperature': {'fmt': '.2f'},
+    'activation_initial_threshold': {'fmt': '.4f'},
+    'activation_sharpness': {'fmt': '.1f'},
+    
+    # Layer parameters
+    'layer_temperature': {'fmt': '.2f'},
+    
+    # Other parameters that might be added
+    'learning_rate': {'fmt': '.5f'},
+    'epochs': {'fmt': 'd'},
+    'batch_size': {'fmt': 'd'},
 } 

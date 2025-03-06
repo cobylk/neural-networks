@@ -26,10 +26,7 @@ def main():
     ]
     
     # Choose a fixed activation function
-    activation_params = {
-        'activation_class': LayerwiseSoftmax,
-        'activation_kwargs': {'temperature': 0.5}
-    }
+    activation = (LayerwiseSoftmax, {'temperature': 0.5})
     
     # Create experiment definition
     experiment_def = ExperimentDefinition(
@@ -39,19 +36,18 @@ def main():
             'dropout_prob': 0.2,
             'epochs': 100,
             'learning_rate': 0.001,
-            'experiment_type': EXPERIMENT_TYPES['vanilla'],
-            'activation_class': activation_params['activation_class'],
-            'activation_kwargs': activation_params['activation_kwargs']
+            'experiment_type': EXPERIMENT_TYPES['vanilla']
         }
     )
     
     # Create experiment runner
     runner = ExperimentRunner(experiment_def)
     
-    # Run architecture experiments
-    tracker = runner.run_architecture_experiments(
+    # Run architecture experiments using grid search
+    # (single activation, multiple architectures)
+    tracker = runner.run_grid_search(
+        activations=[activation],
         architectures=architectures,
-        activation_params=activation_params,
         result_keys=['test_acc', 'train_acc', 'test_loss']
     )
     

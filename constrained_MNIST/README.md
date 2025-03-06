@@ -64,7 +64,7 @@ The `experiment_runner_utils.py` module provides utilities for running and analy
 
 - `run_experiment`: Unified function for running experiments with different configurations
 - `ExperimentDefinition`: Defines a set of experiments with shared base parameters
-- `ExperimentRunner`: Runs experiments with different parameter combinations
+- `ExperimentRunner`: Runs experiments with different parameter combinations using grid search
 - `ExperimentTracker`: Tracks and displays experiment results in formatted tables
 
 ### Runner Scripts
@@ -113,13 +113,19 @@ experiment_def = ExperimentDefinition(
     }
 )
 
-# Create runner and run experiments
+# Create runner and run experiments with grid search
 runner = ExperimentRunner(experiment_def)
-tracker = runner.run_activation_experiments(
+
+# Run grid search with specific parameter combinations
+tracker = runner.run_grid_search(
+    # Multiple activations (varying parameter)
     activations=[
         (nn.ReLU, {}),
         (nn.Tanh, {})
-    ]
+    ],
+    # Fixed architecture (constant parameter)
+    architectures=[[512, 256]],
+    result_keys=['test_acc', 'train_acc']
 )
 
 # Display results

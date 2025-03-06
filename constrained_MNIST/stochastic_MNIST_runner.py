@@ -20,10 +20,10 @@ def main():
         (None, None),  # No activation (just stochastic layers)
         # (PowerNormalization, None),
         # (SparseMax, None),
-        (ThresholdActivation, {
-            'initial_threshold': 0.1, 
-            'sharpness': 15.0,  # Higher sharpness for steeper thresholding
-        }),
+        # (ThresholdActivation, {
+        #     'initial_threshold': 0.1, 
+        #     'sharpness': 15.0,  # Higher sharpness for steeper thresholding
+        # }),
         # (ThresholdActivation, {
         #     'initial_threshold': 0.5,
         #     'sharpness': 15.0,
@@ -39,15 +39,15 @@ def main():
     ]
     
     # Test different temperatures for the stochastic layer
-    temperatures = [1.0]  # Lower temperatures for sharper distributions
+    temperatures = [1.0, 0.5]  # Lower temperatures for sharper distributions
     
     # Create experiment definition
     experiment_def = ExperimentDefinition(
         name="Stochastic MLP",
         config_class=StochasticExperimentConfig,
         base_params={
-            'epochs': 100,
-            'early_stopping_patience': 20,
+            'epochs': 5,
+            'early_stopping_patience': 5,
             'learning_rate': 0.001,
             'batch_size': 128,
             'experiment_type': EXPERIMENT_TYPES['stochastic']

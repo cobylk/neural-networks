@@ -22,8 +22,8 @@ def main():
         (RescaledReLU, {'eps': 1e-10}),  # ReLU with rescaling
         (LayerwiseSoftmax, {'temperature': 1.0}),  # Softmax with temperature
         (LayerwiseSoftmax, {'temperature': 0.5}),  # Softmax with lower temperature
-        (LayerwiseSoftmax, {'temperature': 0.2}),  # Softmax with lower temperature
-        (LayerwiseSoftmax, {'temperature': 0.1}),  # Softmax with lower temperature
+        # (LayerwiseSoftmax, {'temperature': 0.2}),  # Softmax with lower temperature
+        # (LayerwiseSoftmax, {'temperature': 0.1}),  # Softmax with lower temperature
     ]
     
     # Create experiment definition
@@ -33,7 +33,7 @@ def main():
         base_params={
             'hidden_dims': [512, 256, 128, 64],
             'dropout_prob': 0.2,
-            'epochs': 100,
+            'epochs': 5,
             'learning_rate': 0.001,
             'experiment_type': EXPERIMENT_TYPES['vanilla']
         }
@@ -42,9 +42,11 @@ def main():
     # Create experiment runner
     runner = ExperimentRunner(experiment_def)
     
-    # Run activation experiments
-    tracker = runner.run_activation_experiments(
+    # Run activation experiments using grid search
+    # (multiple activations, single architecture)
+    tracker = runner.run_grid_search(
         activations=activations,
+        architectures=[[512, 256, 128, 64]],  # Fixed architecture
         result_keys=['test_acc', 'train_acc']
     )
     
