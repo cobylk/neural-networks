@@ -5,8 +5,8 @@ This module provides infrastructure for training and analyzing neural networks o
 It includes classes for experiment management, model analysis, and training configuration.
 
 Key Components:
+- FileManager: Handles all file operations and path management consistently
 - PlotConfig: Configuration for controlling which plots to generate
-- ExperimentManager: Manages multiple experiments and provides analysis tools
 - ModelAnalyzer: Analyzes model properties and behavior
 - MNISTTrainer: Handles training and evaluation of models on MNIST
 """
@@ -31,6 +31,191 @@ import numpy as np
 from collections import defaultdict
 import pandas as pd
 from base_MLP import BaseMLP
+from file_utils import (EXPERIMENT_TYPES, BASE_RESULTS_DIR, FILENAMES, 
+                      get_results_path, get_run_path, get_checkpoint_path,
+                      get_stats_path, get_plot_path, list_experiment_dirs,
+                      list_run_dirs, list_all_run_dirs)
+
+class FileManager:
+    """Centralized file management system for MNIST experiments.
+    
+    This class handles all file and directory operations in a consistent manner,
+    including path creation, naming conventions, and file saving/loading.
+    """
+    
+    def __init__(self, base_dir: str = BASE_RESULTS_DIR):
+        """Initialize the file manager with a base directory.
+        
+        Args:
+            base_dir: Base directory for all experiment results
+        """
+        self.base_dir = Path(base_dir)
+        self.base_dir.mkdir(exist_ok=True)
+        
+    def create_experiment_dir(self, experiment_type: str) -> Path:
+        """Create and return a directory for a specific experiment type.
+        
+        Args:
+            experiment_type: Type of experiment (e.g., 'vanilla', 'stochastic')
+            
+        Returns:
+            Path to the experiment type directory
+        """
+        return get_results_path(experiment_type)
+    
+    def generate_run_name(self, model_info: Dict[str, Any]) -> str:
+        """Generate a standardized run name based on model and experiment info.
+        
+        Args:
+            model_info: Dictionary containing model information
+            
+        Returns:
+            A standardized run name string
+        """
+        # Get timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Extract model class name
+        model_class = model_info.get('model_class', 'Unknown')
+        
+        # Extract activation name
+        activation_name = model_info.get('activation_name', 'NoActivation')
+        
+        # Get a random name for uniqueness
+        random_name = randomname.get_name()
+        
+        # Assemble the run name
+        run_name = f"{timestamp}_{model_class}_{activation_name}_{random_name}"
+        
+        return run_name
+    
+    def create_run_dir(self, experiment_type: str, run_name: str) -> Path:
+        """Create and return a directory for a specific run.
+        
+        Args:
+            experiment_type: Type of experiment
+            run_name: Name of the run
+            
+        Returns:
+            Path to the run directory
+        """
+        return get_run_path(experiment_type, run_name)
+    
+    def get_checkpoint_path(self, run_dir: Path, filename: str) -> Path:
+        """Get path for a model checkpoint.
+        
+        Args:
+            run_dir: Run directory
+            filename: Checkpoint filename
+            
+        Returns:
+            Path to the checkpoint file
+        """
+        return get_checkpoint_path(run_dir, filename)
+    
+    def get_stats_path(self, run_dir: Path) -> Path:
+        """Get path for run statistics JSON file.
+        
+        Args:
+            run_dir: Run directory
+            
+        Returns:
+            Path to the statistics file
+        """
+        return get_stats_path(run_dir)
+    
+    def get_plot_path(self, run_dir: Path, plot_name: str, format: str = 'png') -> Path:
+        """Get path for a plot file.
+        
+        Args:
+            run_dir: Run directory
+            plot_name: Name of the plot
+            format: File format for the plot
+            
+        Returns:
+            Path to the plot file
+        """
+        return get_plot_path(run_dir, plot_name, format)
+    
+    def save_json(self, data: Dict, path: Path) -> None:
+        """Save data as JSON.
+        
+        Args:
+            data: Data to save
+            path: Path to save the data to
+        """
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=4)
+    
+    def load_json(self, path: Path) -> Dict:
+        """Load data from JSON.
+        
+        Args:
+            path: Path to load the data from
+            
+        Returns:
+            Loaded data as a dictionary
+        """
+        with open(path, 'r') as f:
+            return json.load(f)
+    
+    def save_torch_model(self, data: Dict, path: Path) -> None:
+        """Save PyTorch model data.
+        
+        Args:
+            data: Model data to save
+            path: Path to save the data to
+        """
+        torch.save(data, path)
+    
+    def load_torch_model(self, path: Path) -> Dict:
+        """Load PyTorch model data.
+        
+        Args:
+            path: Path to load the data from
+            
+        Returns:
+            Loaded model data
+        """
+        return torch.load(path)
+    
+    def save_plot(self, fig: plt.Figure, path: Path, dpi: int = 300) -> None:
+        """Save a matplotlib figure.
+        
+        Args:
+            fig: Figure to save
+            path: Path to save the figure to
+            dpi: DPI for the saved figure
+        """
+        fig.savefig(path, dpi=dpi)
+        plt.close(fig)
+    
+    def list_experiment_dirs(self) -> List[Path]:
+        """List all experiment directories.
+        
+        Returns:
+            List of experiment directory paths
+        """
+        return list_experiment_dirs()
+    
+    def list_run_dirs(self, experiment_type: str) -> List[Path]:
+        """List all run directories for a specific experiment type.
+        
+        Args:
+            experiment_type: Type of experiment
+            
+        Returns:
+            List of run directory paths
+        """
+        return list_run_dirs(experiment_type)
+    
+    def list_all_run_dirs(self) -> List[Path]:
+        """List all run directories across all experiment types.
+        
+        Returns:
+            List of all run directory paths
+        """
+        return list_all_run_dirs()
 
 def get_git_info() -> Dict[str, str]:
     """Get git repository information"""
@@ -92,109 +277,6 @@ class PlotConfig:
                     plt.style.use('seaborn-darkgrid')
                 except:
                     plt.style.use('default')
-
-class ExperimentManager:
-    """Manages multiple experiments and provides analysis tools"""
-    def __init__(
-        self, 
-        base_dir: str = "mnist_results",
-        plot_config: Optional[PlotConfig] = None
-    ):
-        self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(exist_ok=True)
-        self.plot_config = plot_config or PlotConfig()
-    
-    def load_all_experiments(self) -> pd.DataFrame:
-        """Load all experiments into a pandas DataFrame for analysis"""
-        experiments = []
-        
-        for exp_dir in self.base_dir.glob("*"):
-            if not exp_dir.is_dir():
-                continue
-                
-            history_file = exp_dir / "run_stats.json"
-            if not history_file.exists():
-                continue
-                
-            with open(history_file, 'r') as f:
-                history = json.load(f)
-                
-            # Flatten metadata for DataFrame
-            exp_data = {
-                'run_name': history['metadata']['run_name'],
-                'hidden_dims': str(history['metadata']['model_config']['hidden_dims']),
-                'num_parameters': history['metadata']['model_config']['num_parameters'],
-                'dropout_prob': history['metadata']['model_config']['dropout_prob'],
-                'learning_rate': history['metadata']['training_config']['learning_rate'],
-                'batch_size': history['metadata']['training_config']['batch_size'],
-                'best_val_acc': history['metadata']['final_metrics']['best_val_acc'],
-                'test_acc': history['metadata']['final_metrics']['test_acc'],
-                'training_duration': history['metadata']['final_metrics']['training_duration'],
-                'total_epochs': history['metadata']['final_metrics']['total_epochs']
-            }
-            experiments.append(exp_data)
-        
-        return pd.DataFrame(experiments)
-    
-    def compare_experiments(self, metric: str = 'test_acc', top_k: int = 5):
-        """Compare experiments and show top k performers"""
-        df = self.load_all_experiments()
-        print(f"\nTop {top_k} experiments by {metric}:")
-        print(df.nlargest(top_k, metric)[['run_name', metric, 'hidden_dims', 'dropout_prob', 'learning_rate']])
-        
-        return df
-    
-    def plot_comparison(self, metric_x: str, metric_y: str, size_metric: Optional[str] = 'num_parameters'):
-        """Create scatter plot comparing two metrics across experiments"""
-        if not self.plot_config.experiment_comparison:
-            return None
-            
-        df = self.load_all_experiments()
-        
-        plt.figure(figsize=(12, 8))
-        
-        # Create scatter plot
-        if size_metric:
-            sizes = 100 * (df[size_metric] - df[size_metric].min()) / (df[size_metric].max() - df[size_metric].min()) + 50
-            plt.scatter(df[metric_x], df[metric_y], s=sizes, alpha=0.6)
-        else:
-            plt.scatter(df[metric_x], df[metric_y], alpha=0.6)
-        
-        # Get current axis bounds
-        x_min, x_max = df[metric_x].min(), df[metric_x].max()
-        y_min, y_max = df[metric_y].min(), df[metric_y].max()
-        
-        # Add padding (5% of range)
-        x_padding = 0.05 * (x_max - x_min)
-        y_padding = 0.05 * (y_max - y_min)
-        
-        # Set axis limits with padding
-        plt.xlim(x_min - x_padding, x_max + x_padding)
-        plt.ylim(y_min - y_padding, y_max + y_padding)
-            
-        # Format axis labels
-        plt.xlabel(metric_x.replace('_', ' ').title())
-        plt.ylabel(metric_y.replace('_', ' ').title())
-        plt.title(f'Experiment Comparison: {metric_x.replace("_", " ").title()} vs {metric_y.replace("_", " ").title()}')
-        
-        # Add run names as annotations with smart positioning
-        for _, row in df.iterrows():
-            # Add annotation with arrow
-            plt.annotate(
-                row['run_name'], 
-                (row[metric_x], row[metric_y]),
-                xytext=(10, 10), 
-                textcoords='offset points',
-                fontsize=8,
-                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7),
-                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.2')
-            )
-        
-        # Add grid for better readability
-        plt.grid(True, linestyle='--', alpha=0.6)
-        
-        plt.tight_layout()
-        return plt.gcf()
 
 class ModelAnalyzer:
     """Analyzes model properties and behavior"""
@@ -508,6 +590,7 @@ class MNISTTrainer:
         learning_rate: float = 0.001,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         save_dir: str = "results",
+        experiment_type: str = "default",
         optimizer_class: Type[optim.Optimizer] = optim.Adam,
         optimizer_kwargs: Dict = None,
         criterion: nn.Module = nn.CrossEntropyLoss(),
@@ -519,22 +602,32 @@ class MNISTTrainer:
         self.device = device
         self.batch_size = batch_size
         self.learning_rate = learning_rate
-        self.save_dir = Path(save_dir)
-        self.save_dir.mkdir(exist_ok=True)
+        self.experiment_type = experiment_type
         self.optimizer_class = optimizer_class
         self.optimizer_kwargs = optimizer_kwargs or {}
         self.criterion = criterion
         self.preprocess_fn = preprocess_fn
+        self.tags = tags or []
         
-        # Generate unique run name with timestamp
-        timestamp = datetime.now().strftime("%m%d%H%M%S")
-        random_name = randomname.get_name()
-        self.run_name = f"{timestamp}_{model.__class__.__name__}_{model.network[1].__class__.__name__}_{random_name}"
+        # Initialize file manager
+        self.file_manager = FileManager(save_dir)
+        
+        # Create model info for run name generation
+        model_info = {
+            'model_class': model.__class__.__name__,
+            'activation_name': model.network[1].__class__.__name__ if hasattr(model, 'network') and len(model.network) > 1 else 'Unknown'
+        }
+        
+        # Generate run name using file manager
+        self.run_name = self.file_manager.generate_run_name(model_info)
         print(f"Run name: {self.run_name}")
         
-        # Create run directory
-        self.run_dir = self.save_dir / self.run_name
-        self.run_dir.mkdir(exist_ok=True)
+        # Create run directory using file manager
+        self.run_dir = self.file_manager.create_run_dir(self.experiment_type, self.run_name)
+        
+        # Setup model analyzer with new plot config
+        self.plot_config = plot_config or PlotConfig()
+        self.analyzer = ModelAnalyzer(model, device=device, plot_config=self.plot_config)
         
         # Setup training components
         self.optimizer = optimizer_class(
@@ -548,70 +641,34 @@ class MNISTTrainer:
         
         # Training history and metadata
         self.history = {
-            'train_loss': [], 'train_acc': [],
-            'val_loss': [], 'val_acc': [],
-            'test_loss': None, 'test_acc': None,
+            'train_loss': [],
+            'train_acc': [],
+            'val_loss': [],
+            'val_acc': [],
+            'test_loss': None,
+            'test_acc': None,
             'metadata': {
-                'timestamp': datetime.now().isoformat(),
                 'run_name': self.run_name,
-                
-                # Model configuration
+                'timestamp': datetime.now().isoformat(),
                 'model_config': {
-                    'class_name': model.__class__.__name__,
-                    'input_dim': model.input_dim,
-                    'hidden_dims': model.hidden_dims,
-                    'output_dim': model.output_dim,
-                    'activation_type': model.network[1].__class__.__name__,
-                    'dropout_prob': model.network[2].p if isinstance(model.network[2], nn.Dropout) else 0.0,
-                    'store_activations': model.store_activations,
-                    'num_parameters': sum(p.numel() for p in model.parameters()),
-                    'num_trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad)
+                    'model_class': model.__class__.__name__,
+                    'hidden_dims': model.hidden_dims if hasattr(model, 'hidden_dims') else None,
+                    'dropout_prob': model.dropout_prob if hasattr(model, 'dropout_prob') else 0.0,
+                    'activation': model.network[1].__class__.__name__ if hasattr(model, 'network') and len(model.network) > 1 else 'Unknown',
+                    'num_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad)
                 },
-                
-                # Training configuration
                 'training_config': {
-                    'batch_size': batch_size,
+                    'optimizer': optimizer_class.__name__,
+                    'optimizer_kwargs': self.optimizer_kwargs,
                     'learning_rate': learning_rate,
-                    'optimizer': {
-                        'class_name': optimizer_class.__name__,
-                        'parameters': optimizer_kwargs
-                    },
-                    'criterion': criterion.__class__.__name__,
+                    'batch_size': batch_size,
                     'device': device,
-                    'preprocess_fn': preprocess_fn.__name__ if preprocess_fn else None
+                    'tags': self.tags
                 },
-                
-                # Dataset information
-                'dataset_info': {
-                    'name': 'MNIST',
-                    'train_size': len(self.train_loader.dataset),
-                    'val_size': len(self.val_loader.dataset),
-                    'test_size': len(self.test_loader.dataset),
-                    'input_shape': (1, 28, 28),
-                    'num_classes': 10
-                },
-                
-                # System information
                 'system_info': get_system_info(),
-                
-                # Git information
                 'git_info': get_git_info()
             }
         }
-        
-        self.tags = tags or []
-        self.plot_config = plot_config or PlotConfig()
-        
-        # Setup analyzer with the same preprocessing function if available
-        self.analyzer = ModelAnalyzer(
-            model, 
-            device, 
-            plot_config=self.plot_config,
-            input_preprocessor=self.preprocess_fn
-        )
-        
-        # Update metadata with tags
-        self.history['metadata']['tags'] = self.tags
     
     def _setup_data(self) -> Tuple[DataLoader, DataLoader, DataLoader]:
         """Setup MNIST data loaders"""
@@ -748,18 +805,19 @@ class MNISTTrainer:
     
     def save_checkpoint(self, filename: str):
         """Save model checkpoint"""
-        path = self.run_dir / filename
-        torch.save({
+        path = self.file_manager.get_checkpoint_path(self.run_dir, filename)
+        checkpoint_data = {
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'history': self.history,
             'run_name': self.run_name
-        }, path)
+        }
+        self.file_manager.save_torch_model(checkpoint_data, path)
     
     def load_checkpoint(self, filename: str):
         """Load model checkpoint"""
-        path = self.run_dir / filename
-        checkpoint = torch.load(path)
+        path = self.file_manager.get_checkpoint_path(self.run_dir, filename)
+        checkpoint = self.file_manager.load_torch_model(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.history = checkpoint['history']
@@ -790,13 +848,13 @@ class MNISTTrainer:
         self.history['metadata']['activation_analysis'] = activation_stats
         
         # Save complete history with all metadata and statistics as JSON
-        history_path = self.run_dir / 'run_stats.json'
-        with open(history_path, 'w') as f:
-            json.dump(self.history, f, indent=4)
+        history_path = self.file_manager.get_stats_path(self.run_dir)
+        self.file_manager.save_json(self.history, history_path)
         
         # Plot training curves if enabled
         if self.plot_config.training_curves:
-            plt.figure(figsize=(10, 5))
+            # Create the figure
+            fig = plt.figure(figsize=(10, 5))
             
             # Loss plot
             plt.subplot(1, 2, 1)
@@ -817,25 +875,22 @@ class MNISTTrainer:
             plt.legend()
             
             plt.tight_layout()
-            plt.savefig(self.run_dir / f'training_curves.{self.plot_config.save_format}', dpi=self.plot_config.dpi)
-            plt.close()
+            
+            # Save using file manager
+            plot_path = self.file_manager.get_plot_path(self.run_dir, 'training_curves', self.plot_config.save_format)
+            self.file_manager.save_plot(fig, plot_path, self.plot_config.dpi)
         
         # Save weight distribution plot if enabled
-        weight_dist_fig = self.analyzer.plot_weight_distributions()
-        if weight_dist_fig:
-            weight_dist_fig.savefig(
-                self.run_dir / f'weight_distributions.{self.plot_config.save_format}',
-                dpi=self.plot_config.dpi
-            )
-            plt.close(weight_dist_fig)
+        if self.plot_config.weight_distributions:
+            weight_dist_fig = self.analyzer.plot_weight_distributions()
+            if weight_dist_fig:
+                plot_path = self.file_manager.get_plot_path(self.run_dir, 'weight_distributions', self.plot_config.save_format)
+                self.file_manager.save_plot(weight_dist_fig, plot_path, self.plot_config.dpi)
         
         # Save activation distribution plot
         act_dist_fig = self.analyzer.plot_activation_distributions(self.val_loader, num_batches=3)
         if act_dist_fig:
-            act_dist_fig.savefig(
-                self.run_dir / f'activation_distributions.{self.plot_config.save_format}',
-                dpi=self.plot_config.dpi
-            )
-            plt.close(act_dist_fig)
+            plot_path = self.file_manager.get_plot_path(self.run_dir, 'activation_distributions', self.plot_config.save_format)
+            self.file_manager.save_plot(act_dist_fig, plot_path, self.plot_config.dpi)
         
         print(f'Results saved in: {self.run_dir}')

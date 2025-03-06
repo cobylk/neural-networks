@@ -9,6 +9,7 @@ import torch.nn as nn
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Type, Optional, Union, Tuple
 from experiment_utils import PlotConfig
+from file_utils import EXPERIMENT_TYPES, BASE_RESULTS_DIR
 
 @dataclass
 class BaseExperimentConfig:
@@ -18,7 +19,8 @@ class BaseExperimentConfig:
     learning_rate: float = 0.001
     epochs: int = 30
     early_stopping_patience: int = 5
-    save_dir: str = "results"
+    save_dir: str = BASE_RESULTS_DIR
+    experiment_type: str = EXPERIMENT_TYPES['default']
     plot_config: Optional[PlotConfig] = None
     
     def get_default_plot_config(self):
@@ -40,7 +42,7 @@ class VanillaExperimentConfig(BaseExperimentConfig):
     dropout_prob: float = 0.0
     activation_class: Type = nn.ReLU
     activation_kwargs: Dict[str, Any] = field(default_factory=dict)
-    save_dir: str = "constrained_activations_dropout"
+    experiment_type: str = EXPERIMENT_TYPES['vanilla']
 
 @dataclass
 class StochasticExperimentConfig(BaseExperimentConfig):
@@ -48,7 +50,7 @@ class StochasticExperimentConfig(BaseExperimentConfig):
     activation_class: Optional[Type] = None
     activation_kwargs: Dict[str, Any] = field(default_factory=dict)
     layer_kwargs: Dict[str, Any] = field(default_factory=dict)
-    save_dir: str = "threshold_experiments"
+    experiment_type: str = EXPERIMENT_TYPES['stochastic']
     
     def __post_init__(self):
         """Initialize default layer kwargs if none provided."""
