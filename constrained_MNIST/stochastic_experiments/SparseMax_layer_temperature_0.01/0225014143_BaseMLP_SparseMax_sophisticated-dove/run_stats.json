@@ -1,0 +1,271 @@
+{
+    "train_loss": [
+        1.8738914137767955,
+        1.8051536639719779,
+        1.8016907685740864,
+        1.80077020845142,
+        1.8003322973635525,
+        1.7994248977204634,
+        1.7994971289453914,
+        1.7992809448761962,
+        1.7991045442237674
+    ],
+    "train_acc": [
+        70.88518518518518,
+        74.66481481481482,
+        75.46481481481482,
+        75.61111111111111,
+        75.6,
+        75.65,
+        75.79444444444445,
+        75.68148148148148,
+        75.66481481481482
+    ],
+    "val_loss": [
+        1.8122607824650216,
+        1.8080832856766722,
+        1.806954284931751,
+        1.8038641645553264,
+        1.8039349647278482,
+        1.807146556833957,
+        1.8065698425820533,
+        1.805623861069375,
+        1.8049971423250564
+    ],
+    "val_acc": [
+        73.9,
+        75.21666666666667,
+        75.26666666666667,
+        75.71666666666667,
+        75.41666666666667,
+        75.28333333333333,
+        74.88333333333334,
+        74.76666666666667,
+        75.0
+    ],
+    "test_loss": 1.7931497338451916,
+    "test_acc": 76.07,
+    "metadata": {
+        "timestamp": "2025-02-25T01:41:43.922358",
+        "run_name": "0225014143_BaseMLP_SparseMax_sophisticated-dove",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "SparseMax",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 566528,
+            "num_trainable_parameters": 566528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "a3b0a5e3f94443cb345268bf1f25446ff58657b8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_3",
+            "activation_SparseMax_layer_temperature_0.01"
+        ],
+        "final_metrics": {
+            "best_val_loss": 1.8038641645553264,
+            "best_val_acc": 75.71666666666667,
+            "best_epoch": 3,
+            "total_epochs": 9,
+            "training_duration": 35.856693,
+            "test_loss": 1.7931497338451916,
+            "test_acc": 76.07
+        },
+        "weight_analysis": {
+            "network.linear_0.raw_weight": {
+                "mean": 0.00937182642519474,
+                "std": 0.05088575929403305,
+                "min": -0.13683979213237762,
+                "max": 0.31627392768859863,
+                "norm": 32.78154754638672,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 46.78108215332031,
+                "shape": [
+                    512,
+                    784
+                ],
+                "num_params": 401408
+            },
+            "network.linear_1.raw_weight": {
+                "mean": 0.0018034150125458837,
+                "std": 0.05738981068134308,
+                "min": -0.10418786108493805,
+                "max": 0.23084798455238342,
+                "norm": 20.787487030029297,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 51.444244384765625,
+                "shape": [
+                    256,
+                    512
+                ],
+                "num_params": 131072
+            },
+            "network.linear_2.raw_weight": {
+                "mean": -0.0032978318631649017,
+                "std": 0.07424546033143997,
+                "min": -0.12498654425144196,
+                "max": 0.2662723958492279,
+                "norm": 13.452914237976074,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 53.936767578125,
+                "shape": [
+                    128,
+                    256
+                ],
+                "num_params": 32768
+            },
+            "network.linear_3.raw_weight": {
+                "mean": -0.023751210421323776,
+                "std": 0.09532405436038971,
+                "min": -0.20832964777946472,
+                "max": 0.3122529685497284,
+                "norm": 3.513392686843872,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 50.234378814697266,
+                "shape": [
+                    10,
+                    128
+                ],
+                "num_params": 1280
+            }
+        },
+        "activation_analysis": {
+            "pre_activation:network.linear_0_preact": {
+                "avg_means": -0.22063841401262485,
+                "std_means": 0.006210186942835132,
+                "avg_stds": 0.17661850090990674,
+                "std_stds": 0.004002358463598831,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -0.4242130219936371,
+                "std_mins": 0.0,
+                "avg_maxs": 2.689815156003262,
+                "std_maxs": 0.08810400337162214,
+                "avg_sum": -14420.514440658244
+            },
+            "post_activation:network.activation_0_postact": {
+                "avg_means": 0.0019531249950461565,
+                "std_means": 3.3598601179659466e-11,
+                "avg_stds": 0.035019340667318793,
+                "std_stds": 0.0006935557440077672,
+                "avg_sparsity": 0.9944912055705456,
+                "std_sparsity": 0.00020628570124387838,
+                "avg_mins": 0.0,
+                "std_mins": 0.0,
+                "avg_maxs": 1.0,
+                "std_maxs": 0.0,
+                "avg_sum": 127.65957414343002
+            },
+            "pre_activation:network.linear_1_preact": {
+                "avg_means": 0.0039042197415565557,
+                "std_means": 2.007470680244724e-06,
+                "avg_stds": 0.049417488673265945,
+                "std_stds": 0.0009802065818721977,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 1.0679669802492201e-13,
+                "std_mins": 2.7503533817071762e-14,
+                "avg_maxs": 0.9999992847442627,
+                "std_maxs": 0.0,
+                "avg_sum": 127.59315084903798
+            },
+            "post_activation:network.activation_1_postact": {
+                "avg_means": 0.0039062499455077217,
+                "std_means": 9.85802405995951e-11,
+                "avg_stds": 0.04941740410125002,
+                "std_stds": 0.0009802039833383866,
+                "avg_sparsity": 0.9430853661070479,
+                "std_sparsity": 0.01090041218068922,
+                "avg_mins": 0.0,
+                "std_mins": 0.0,
+                "avg_maxs": 0.9999986290931702,
+                "std_maxs": 0.0,
+                "avg_sum": 127.65957268248214
+            },
+            "pre_activation:network.linear_2_preact": {
+                "avg_means": 0.007782148316185525,
+                "std_means": 2.702472700881113e-05,
+                "avg_stds": 0.06960243081792872,
+                "std_stds": 0.0013894721460603362,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 2.6634807920645585e-16,
+                "std_mins": 7.629466139374327e-17,
+                "avg_maxs": 0.9999956488609314,
+                "std_maxs": 0.0,
+                "avg_sum": 127.16313106455702
+            },
+            "post_activation:network.activation_2_postact": {
+                "avg_means": 0.007812499871200069,
+                "std_means": 3.142470915416159e-10,
+                "avg_stds": 0.06960179862823893,
+                "std_stds": 0.0013894813700062014,
+                "avg_sparsity": 0.44030631856715424,
+                "std_sparsity": 0.03716077265207485,
+                "avg_mins": 0.0,
+                "std_mins": 0.0,
+                "avg_maxs": 0.9999954104423523,
+                "std_maxs": 0.0,
+                "avg_sum": 127.65957235782705
+            },
+            "pre_activation:network.linear_3_preact": {
+                "avg_means": 0.0995694395709545,
+                "std_means": 0.00038263036772854424,
+                "avg_stds": 0.2300153504660789,
+                "std_stds": 0.00538582000289979,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 2.025109693268938e-17,
+                "std_mins": 5.94530050311914e-18,
+                "avg_maxs": 0.9999943375587463,
+                "std_maxs": 0.0,
+                "avg_sum": 127.10938620060048
+            }
+        }
+    }
+}

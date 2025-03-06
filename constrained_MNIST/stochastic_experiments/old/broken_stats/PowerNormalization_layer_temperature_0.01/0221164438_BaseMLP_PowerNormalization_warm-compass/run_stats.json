@@ -1,0 +1,176 @@
+{
+    "train_loss": [
+        2.2864981155259914,
+        2.285010858734637,
+        2.284919094135411,
+        2.2857604614366287,
+        2.2858200790757817,
+        2.286329507262786,
+        2.286400763909399
+    ],
+    "train_acc": [
+        36.55185185185185,
+        36.05185185185185,
+        34.10740740740741,
+        31.994444444444444,
+        31.79259259259259,
+        31.794444444444444,
+        32.583333333333336
+    ],
+    "val_loss": [
+        2.2854830812900624,
+        2.284091741480726,
+        2.2853688787906727,
+        2.285002282325258,
+        2.2855845207863665,
+        2.285833252237198,
+        2.2866692543029785
+    ],
+    "val_acc": [
+        36.65,
+        36.3,
+        34.0,
+        31.35,
+        33.1,
+        33.05,
+        33.53333333333333
+    ],
+    "test_loss": 2.2869790324681922,
+    "test_acc": 33.24,
+    "metadata": {
+        "timestamp": "2025-02-21T16:44:38.378019",
+        "run_name": "0221164438_BaseMLP_PowerNormalization_warm-compass",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "PowerNormalization",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 566528,
+            "num_trainable_parameters": 566528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "a3b0a5e3f94443cb345268bf1f25446ff58657b8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_3",
+            "activation_PowerNormalization_layer_temperature_0.01"
+        ],
+        "final_metrics": {
+            "best_val_loss": 2.284091741480726,
+            "best_val_acc": 36.65,
+            "best_epoch": 1,
+            "total_epochs": 7,
+            "training_duration": 20.271455,
+            "test_loss": 2.2869790324681922,
+            "test_acc": 33.24
+        },
+        "weight_analysis": {
+            "network.linear_0.raw_weight": {
+                "mean": 0.001963401213288307,
+                "std": 0.043149493634700775,
+                "min": -0.09547746181488037,
+                "max": 0.23234738409519196,
+                "norm": 27.366201400756836,
+                "sparsity": 0.0
+            },
+            "network.linear_1.raw_weight": {
+                "mean": -0.0026569170877337456,
+                "std": 0.05498532950878143,
+                "min": -0.10600986331701279,
+                "max": 0.2749083638191223,
+                "norm": 19.929920196533203,
+                "sparsity": 0.0
+            },
+            "network.linear_2.raw_weight": {
+                "mean": -0.007329159881919622,
+                "std": 0.06930956244468689,
+                "min": -0.12499955296516418,
+                "max": 0.27197009325027466,
+                "norm": 12.616128921508789,
+                "sparsity": 0.0
+            },
+            "network.linear_3.raw_weight": {
+                "mean": -0.02147429622709751,
+                "std": 0.10273699462413788,
+                "min": -0.2083779126405716,
+                "max": 0.3355371654033661,
+                "norm": 3.7536606788635254,
+                "sparsity": 0.0
+            }
+        },
+        "activation_analysis": {
+            "network.linear_0": {
+                "avg_means": -0.3264345773991118,
+                "std_means": 0.003205324377956771,
+                "avg_stds": 0.210693156465571,
+                "std_stds": 0.005217609046771156,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_1": {
+                "avg_means": 0.0034403103661346944,
+                "std_means": 8.468562244536605e-05,
+                "avg_stds": 0.028786411231502572,
+                "std_stds": 0.0008081725938327919,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_2": {
+                "avg_means": 0.004448021395488623,
+                "std_means": 3.625200967070393e-05,
+                "avg_stds": 0.012408117783513474,
+                "std_stds": 0.00018914596404117525,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            },
+            "network.linear_3": {
+                "avg_means": 0.016999970804503623,
+                "std_means": 0.00032392293508405606,
+                "avg_stds": 0.015213176390116519,
+                "std_stds": 0.0001595543395744816,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0
+            }
+        }
+    }
+}

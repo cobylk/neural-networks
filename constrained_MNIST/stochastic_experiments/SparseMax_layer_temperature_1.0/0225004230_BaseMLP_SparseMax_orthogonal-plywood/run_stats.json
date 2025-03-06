@@ -1,0 +1,233 @@
+{
+    "train_loss": [
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615
+    ],
+    "train_acc": [
+        10.377777777777778,
+        10.701851851851853,
+        11.194444444444445,
+        11.316666666666666,
+        11.53888888888889,
+        11.722222222222221
+    ],
+    "val_loss": [
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615,
+        2.3025853633880615
+    ],
+    "val_acc": [
+        11.183333333333334,
+        8.933333333333334,
+        11.483333333333333,
+        11.6,
+        9.3,
+        9.666666666666666
+    ],
+    "test_loss": 2.3025853633880615,
+    "test_acc": 9.63,
+    "metadata": {
+        "timestamp": "2025-02-25T00:42:30.122685",
+        "run_name": "0225004230_BaseMLP_SparseMax_orthogonal-plywood",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "SparseMax",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 566528,
+            "num_trainable_parameters": 566528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "a3b0a5e3f94443cb345268bf1f25446ff58657b8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_3",
+            "activation_SparseMax_layer_temperature_1.0"
+        ],
+        "final_metrics": {
+            "best_val_loss": 2.3025853633880615,
+            "best_val_acc": 11.6,
+            "best_epoch": 0,
+            "total_epochs": 6,
+            "training_duration": 27.170354,
+            "test_loss": 2.3025853633880615,
+            "test_acc": 9.63
+        },
+        "weight_analysis": {
+            "network.linear_0.raw_weight": {
+                "mean": -7.684806769248098e-05,
+                "std": 0.03926766291260719,
+                "min": -0.06889089941978455,
+                "max": 0.06908198446035385,
+                "norm": 24.878599166870117,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 50.0724983215332,
+                "shape": [
+                    512,
+                    784
+                ],
+                "num_params": 401408
+            },
+            "network.linear_1.raw_weight": {
+                "mean": -0.00023242426686920226,
+                "std": 0.05101102590560913,
+                "min": -0.08884374797344208,
+                "max": 0.08907851576805115,
+                "norm": 18.46805191040039,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 50.1312255859375,
+                "shape": [
+                    256,
+                    512
+                ],
+                "num_params": 131072
+            },
+            "network.linear_2.raw_weight": {
+                "mean": 5.103232979308814e-05,
+                "std": 0.07235177606344223,
+                "min": -0.12542513012886047,
+                "max": 0.12554298341274261,
+                "norm": 13.096871376037598,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 49.7802734375,
+                "shape": [
+                    128,
+                    256
+                ],
+                "num_params": 32768
+            },
+            "network.linear_3.raw_weight": {
+                "mean": 0.0005429497687146068,
+                "std": 0.12012786418199539,
+                "min": -0.2088513821363449,
+                "max": 0.20853297412395477,
+                "norm": 4.296189785003662,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 49.84375,
+                "shape": [
+                    10,
+                    128
+                ],
+                "num_params": 1280
+            }
+        },
+        "activation_analysis": {
+            "pre_activation:network.linear_0_StochasticLayer": {
+                "avg_means": 0.002360119957457039,
+                "std_means": 0.012343042939861796,
+                "avg_stds": 0.1387774184980291,
+                "std_stds": 0.007948378986915076,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -0.27919648143839326,
+                "std_mins": 0.01975489759817908,
+                "avg_maxs": 0.42241832296899023,
+                "std_maxs": 0.08383317380694659,
+                "avg_sum": 153.17961071907206
+            },
+            "post_activation:network.activation_0_SparseMax": {
+                "avg_means": 0.007812499821661634,
+                "std_means": 2.263640877651222e-10,
+                "avg_stds": 1.2865206999015057e-08,
+                "std_stds": 1.4219673868175097e-10,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 0.007812450392211371,
+                "std_mins": 3.0960848032438845e-09,
+                "avg_maxs": 0.007812554571539797,
+                "std_maxs": 3.718644111538815e-09,
+                "avg_sum": 127.65957154618933
+            },
+            "pre_activation:network.linear_1_StochasticLayer": {
+                "avg_means": 0.00195317099643673,
+                "std_means": 1.7674245824959433e-08,
+                "avg_stds": 2.832304463926777e-06,
+                "std_stds": 3.249971388205238e-08,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 0.001941235292643467,
+                "std_mins": 7.774076469536914e-07,
+                "avg_maxs": 0.0019653396869197173,
+                "std_maxs": 7.89601982004809e-07,
+                "avg_sum": 63.83129184804064
+            },
+            "pre_activation:network.linear_2_StochasticLayer": {
+                "avg_means": 0.0039062496879078605,
+                "std_means": 1.9377065005700266e-10,
+                "avg_stds": 1.289494750221941e-08,
+                "std_stds": 1.4124262642179028e-10,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 0.003906199718488658,
+                "std_mins": 2.8161543616808087e-09,
+                "avg_maxs": 0.003906304304032249,
+                "std_maxs": 3.552289212399491e-09,
+                "avg_sum": 63.82978212072494
+            },
+            "pre_activation:network.linear_3_StochasticLayer": {
+                "avg_means": 0.0078125,
+                "std_means": 0.0,
+                "avg_stds": 1.2450779721649679e-09,
+                "std_stds": 2.0833812460884756e-11,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": 0.007812496403509632,
+                "std_mins": 3.925745148798045e-10,
+                "avg_maxs": 0.007812504101782403,
+                "std_maxs": 4.957804972819827e-10,
+                "avg_sum": 9.97340425531915
+            }
+        }
+    }
+}

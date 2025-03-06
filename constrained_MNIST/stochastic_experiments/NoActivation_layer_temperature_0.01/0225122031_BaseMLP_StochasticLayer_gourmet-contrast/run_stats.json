@@ -1,0 +1,236 @@
+{
+    "train_loss": [
+        0.47013566053309147,
+        0.36483092895616287,
+        0.35078877373046785,
+        0.3412713902821473,
+        0.3393314580004927,
+        0.3380625542094357,
+        0.3373555298276705,
+        0.3396900468527988,
+        0.3322903185517867,
+        0.33077844783169397
+    ],
+    "train_acc": [
+        85.88703703703703,
+        89.24814814814815,
+        89.63888888888889,
+        89.99444444444444,
+        89.96851851851852,
+        90.13518518518518,
+        90.1037037037037,
+        90.02222222222223,
+        90.27222222222223,
+        90.30740740740741
+    ],
+    "val_loss": [
+        0.3826761480341566,
+        0.38176776500458415,
+        0.38101835390354727,
+        0.3896133525574461,
+        0.3558858744007476,
+        0.38329410109114137,
+        0.38083625505579277,
+        0.36804324864073,
+        0.3594354400609402,
+        0.3647868737895438
+    ],
+    "val_acc": [
+        89.43333333333334,
+        89.18333333333334,
+        89.16666666666667,
+        89.36666666666666,
+        90.08333333333333,
+        89.36666666666666,
+        89.45,
+        89.73333333333333,
+        90.0,
+        89.81666666666666
+    ],
+    "test_loss": 0.3298298285307386,
+    "test_acc": 90.34,
+    "metadata": {
+        "timestamp": "2025-02-25T12:20:31.521360",
+        "run_name": "0225122031_BaseMLP_StochasticLayer_gourmet-contrast",
+        "model_config": {
+            "class_name": "BaseMLP",
+            "input_dim": 784,
+            "hidden_dims": [
+                512,
+                256,
+                128
+            ],
+            "output_dim": 10,
+            "activation_type": "StochasticLayer",
+            "dropout_prob": 0.0,
+            "store_activations": true,
+            "num_parameters": 566528,
+            "num_trainable_parameters": 566528
+        },
+        "training_config": {
+            "batch_size": 128,
+            "learning_rate": 0.001,
+            "optimizer": {
+                "class_name": "Adam",
+                "parameters": null
+            },
+            "criterion": "CrossEntropyLoss",
+            "device": "cpu"
+        },
+        "dataset_info": {
+            "name": "MNIST",
+            "train_size": 54000,
+            "val_size": 6000,
+            "test_size": 10000,
+            "input_shape": [
+                1,
+                28,
+                28
+            ],
+            "num_classes": 10
+        },
+        "system_info": {
+            "python_version": "3.12.6 (main, Sep  6 2024, 19:03:47) [Clang 15.0.0 (clang-1500.3.9.4)]",
+            "pytorch_version": "2.6.0",
+            "cuda_available": false,
+            "cuda_version": null,
+            "platform": "macOS-15.1-arm64-arm-64bit",
+            "cpu_count": "arm64",
+            "processor": "arm"
+        },
+        "git_info": {
+            "commit_hash": "03d718137e77b2c5b3526bcb4ff8b5d40f4f3cf8",
+            "branch": "main",
+            "is_dirty": true
+        },
+        "tags": [
+            "stochastic_layers_3",
+            "activation_NoActivation_layer_temperature_0.01"
+        ],
+        "final_metrics": {
+            "best_val_loss": 0.3558858744007476,
+            "best_val_acc": 90.08333333333333,
+            "best_epoch": 4,
+            "total_epochs": 10,
+            "training_duration": 29.307141,
+            "test_loss": 0.3298298285307386,
+            "test_acc": 90.34
+        },
+        "weight_analysis": {
+            "network.linear_0.raw_weight": {
+                "mean": -0.009876553900539875,
+                "std": 0.04170887544751167,
+                "min": -0.10728593915700912,
+                "max": 0.19923199713230133,
+                "norm": 27.155975341796875,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 59.31645584106445,
+                "shape": [
+                    512,
+                    784
+                ],
+                "num_params": 401408
+            },
+            "network.linear_1.raw_weight": {
+                "mean": -0.005469115450978279,
+                "std": 0.052538421005010605,
+                "min": -0.11373241990804672,
+                "max": 0.17039033770561218,
+                "norm": 19.123605728149414,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 55.428314208984375,
+                "shape": [
+                    256,
+                    512
+                ],
+                "num_params": 131072
+            },
+            "network.linear_2.raw_weight": {
+                "mean": -0.002924433909356594,
+                "std": 0.070659339427948,
+                "min": -0.12506090104579926,
+                "max": 0.184940367937088,
+                "norm": 12.801468849182129,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 52.9998779296875,
+                "shape": [
+                    128,
+                    256
+                ],
+                "num_params": 32768
+            },
+            "network.linear_3.raw_weight": {
+                "mean": 3.654118700069375e-05,
+                "std": 0.12015608698129654,
+                "min": -0.2078595757484436,
+                "max": 0.23137636482715607,
+                "norm": 4.297155857086182,
+                "sparsity": 0.0,
+                "has_negative": true,
+                "percent_negative": 50.3125,
+                "shape": [
+                    10,
+                    128
+                ],
+                "num_params": 1280
+            }
+        },
+        "activation_analysis": {
+            "pre_activation:network.linear_0_preact": {
+                "avg_means": -0.0005760630766088341,
+                "std_means": 0.01746948169622651,
+                "avg_stds": 0.8146494068997971,
+                "std_stds": 0.01530663275433604,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -6.130466532199941,
+                "std_mins": 0.020307233758923973,
+                "avg_maxs": 14.114637253132273,
+                "std_maxs": 1.4742690783886976,
+                "avg_sum": -38.163623403995594
+            },
+            "pre_activation:network.linear_1_preact": {
+                "avg_means": -0.0011520961676030716,
+                "std_means": 0.03493896325595932,
+                "avg_stds": 0.9944788750181807,
+                "std_stds": 0.028765664511880718,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -13.581119537353516,
+                "std_mins": 0.5854234219179766,
+                "avg_maxs": 13.65306121745008,
+                "std_maxs": 2.2685732255821276,
+                "avg_sum": -38.16264408192736
+            },
+            "pre_activation:network.linear_2_preact": {
+                "avg_means": -0.002304177315152706,
+                "std_means": 0.06987792383906644,
+                "avg_stds": 1.1273196326925399,
+                "std_stds": 0.059141279932748925,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -5.404199316146526,
+                "std_mins": 0.20355133242389595,
+                "avg_maxs": 7.484837643643643,
+                "std_maxs": 1.1770758927622917,
+                "avg_sum": -38.16239831802693
+            },
+            "pre_activation:network.linear_3_preact": {
+                "avg_means": -0.029493478384423764,
+                "std_means": 0.8944373621482572,
+                "avg_stds": 12.3082795650401,
+                "std_stds": 0.7703859970359569,
+                "avg_sparsity": 0.0,
+                "std_sparsity": 0.0,
+                "avg_mins": -26.02371694686565,
+                "std_mins": 1.156384344377379,
+                "avg_maxs": 50.60133994893825,
+                "std_maxs": 7.840825137106934,
+                "avg_sum": -38.16241179121302
+            }
+        }
+    }
+}
