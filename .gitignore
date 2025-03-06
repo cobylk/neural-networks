@@ -12,11 +12,8 @@ data/
 ubyte
 
 # Experiment results
-constrained_activations/
-constrained_activations_dropout/
-threshold_experiments/
-stochastic_experiments/
 *_results/
+results/
 
 # Distribution / packaging
 .Python
@@ -88,4 +85,7 @@ venv.bak/
 
 # Logs
 *.log
-logs/ 
+logs/
+
+# Other
+.DS_Store
