@@ -75,7 +75,7 @@ def run_experiment(config,
     
     Returns:
         trainer: The trainer instance
-        history: Training history
+        history: Training history with threshold values if applicable
     """
     model_kwargs = model_kwargs or {}
     trainer_kwargs = trainer_kwargs or {}
@@ -178,6 +178,24 @@ def run_experiment(config,
         early_stopping_patience=config.early_stopping_patience
     )
     
+    # After training, capture threshold values if using threshold activation
+    from activations import ThresholdActivation
+    
+    # First check if the main activation is a ThresholdActivation
+    if isinstance(activation, ThresholdActivation):
+        history['final_threshold'] = activation.get_threshold()
+        
+    # Also check if any modules in the network are ThresholdActivation
+    if hasattr(model, 'network'):
+        for i, layer in enumerate(model.network):
+            if isinstance(layer, ThresholdActivation):
+                history[f'final_threshold_layer_{i}'] = layer.get_threshold()
+            # Also check for activation in sequential modules
+            elif isinstance(layer, nn.Sequential):
+                for j, sublayer in enumerate(layer):
+                    if isinstance(sublayer, ThresholdActivation):
+                        history[f'final_threshold_layer_{i}_{j}'] = sublayer.get_threshold()
+    
     return trainer, history
 
 
@@ -221,6 +239,7 @@ class ExperimentTracker:
             if key not in self.columns and (
                 key.startswith('activation_') or 
                 key.startswith('layer_') or
+                key.startswith('final_threshold') or
                 key in ['temperature', 'dropout_prob']
             ):
                 self.columns.append(key)
@@ -277,6 +296,12 @@ class ExperimentTracker:
                     column_name = col.replace('activation_', '')
                 elif col.startswith('layer_'):
                     column_name = col.replace('layer_', '')
+                elif col.startswith('final_threshold_layer_'):
+                    # Format as "Threshold Layer X"
+                    layer_num = col.replace('final_threshold_layer_', '')
+                    column_name = f"Threshold Layer {layer_num}"
+                elif col == 'final_threshold':
+                    column_name = "Final Threshold"
                 
                 headers.append(f"{prefix}{column_name.replace('_', ' ').title()}{suffix}")
             else:
@@ -286,6 +311,12 @@ class ExperimentTracker:
                     column_name = col.replace('activation_', '')
                 elif col.startswith('layer_'):
                     column_name = col.replace('layer_', '')
+                elif col.startswith('final_threshold_layer_'):
+                    # Format as "Threshold Layer X"
+                    layer_num = col.replace('final_threshold_layer_', '')
+                    column_name = f"Threshold Layer {layer_num}"
+                elif col == 'final_threshold':
+                    column_name = "Final Threshold"
                     
                 headers.append(column_name.replace('_', ' ').title())
         
@@ -601,6 +632,13 @@ DEFAULT_FORMAT_SPEC = {
     'activation_temperature': {'fmt': '.2f'},
     'activation_initial_threshold': {'fmt': '.4f'},
     'activation_sharpness': {'fmt': '.1f'},
+    
+    # Final threshold values after training
+    'final_threshold': {'fmt': '.4f', 'prefix': '(final) '},
+    'final_threshold_layer_0': {'fmt': '.4f', 'prefix': 'L0: '},
+    'final_threshold_layer_1': {'fmt': '.4f', 'prefix': 'L1: '},
+    'final_threshold_layer_2': {'fmt': '.4f', 'prefix': 'L2: '},
+    'final_threshold_layer_3': {'fmt': '.4f', 'prefix': 'L3: '},
     
     # Layer parameters
     'layer_temperature': {'fmt': '.2f'},

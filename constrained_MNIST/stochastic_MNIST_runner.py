@@ -5,7 +5,7 @@ This script runs experiments with stochastic layers on the MNIST dataset
 with different activation functions and configurations.
 """
 
-from activations import ThresholdActivation, SparseMax, PowerNormalization
+from activations import ThresholdActivation, SparseMax, PowerNormalization, FixedThreshold
 from config import StochasticExperimentConfig, EXPERIMENT_TYPES
 from experiment_runner_utils import (
     ExperimentDefinition, 
@@ -17,17 +17,10 @@ def main():
     """Run experiments with different architectures and activations"""
     # Define activation functions to test
     activations = [
-        (None, None),  # No activation (just stochastic layers)
+        # (None, None),  # No activation (just stochastic layers)
         # (PowerNormalization, None),
         # (SparseMax, None),
-        # (ThresholdActivation, {
-        #     'initial_threshold': 0.1, 
-        #     'sharpness': 15.0,  # Higher sharpness for steeper thresholding
-        # }),
-        # (ThresholdActivation, {
-        #     'initial_threshold': 0.5,
-        #     'sharpness': 15.0,
-        # }),
+        (FixedThreshold, None),
         # (ThresholdActivation, {'initial_threshold': 0.05})
     ]
     
@@ -39,15 +32,15 @@ def main():
     ]
     
     # Test different temperatures for the stochastic layer
-    temperatures = [1.0, 0.5]  # Lower temperatures for sharper distributions
+    temperatures = [0.5] 
     
     # Create experiment definition
     experiment_def = ExperimentDefinition(
         name="Stochastic MLP",
         config_class=StochasticExperimentConfig,
         base_params={
-            'epochs': 5,
-            'early_stopping_patience': 5,
+            'epochs': 100,
+            'early_stopping_patience': 20,
             'learning_rate': 0.001,
             'batch_size': 128,
             'experiment_type': EXPERIMENT_TYPES['stochastic']

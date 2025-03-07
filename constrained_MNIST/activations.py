@@ -16,7 +16,7 @@ class RescaledReLU(nn.Module):
         # Normalize each sample's activations to sum to 1
         return x / x.sum(dim=1, keepdim=True)
 
-class LayerwiseSoftmax(nn.Module):
+class LayerwiseSoftmax(nn.Module): 
     """Applies softmax to each layer's outputs"""
     def __init__(self, temperature=1.0):
         super().__init__()
@@ -95,7 +95,7 @@ class ThresholdActivation(nn.Module):
         hard_forward (bool): Whether to use the exact (non-differentiable) threshold
                             during forward pass for inference (default: True)
     """
-    def __init__(self, initial_threshold=0.5, constraint_min=0.0, constraint_max=1.0, 
+    def __init__(self, initial_threshold=0.5, constraint_min=0.0, constraint_max=100.0, 
                  sharpness=10.0, hard_forward=True):
         super().__init__()
         # Initialize the threshold as a learnable parameter
@@ -119,7 +119,7 @@ class ThresholdActivation(nn.Module):
             mask = torch.sigmoid(self.sharpness * (x - constrained_threshold))
         else:
             # Hard thresholding for inference (non-differentiable but exact)
-            mask = (x >= constrained_threshold).float()
+            mask = (x >= self.threshold).float()
         
         # Apply the mask to scale values according to threshold
         return x * mask
@@ -132,3 +132,15 @@ class ThresholdActivation(nn.Module):
     def extra_repr(self):
         """Return a string with extra information"""
         return f'initial_threshold={self.initial_value}, current_threshold={self.get_threshold():.4f}, sharpness={self.sharpness}'
+
+class FixedThreshold(nn.Module):
+    """Fixed threshold activation function"""
+    def __init__(self):
+        super().__init__()
+        # self.threshold = threshold
+        
+    def forward(self, x):
+        thresholded_activations = torch.maximum(x, torch.tensor(10.0))
+        sum_thresholded_activations = torch.sum(thresholded_activations)
+        return (thresholded_activations / sum_thresholded_activations) * 100
+    
