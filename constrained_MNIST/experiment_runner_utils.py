@@ -179,22 +179,30 @@ def run_experiment(config,
     )
     
     # After training, capture threshold values if using threshold activation
-    from activations import ThresholdActivation
+    from activations import ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU
     
-    # First check if the main activation is a ThresholdActivation
-    if isinstance(activation, ThresholdActivation):
+    # First check if the main activation is a ThresholdActivation, JumpReLU, or *RescaledJumpReLU
+    if isinstance(activation, (ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU)):
         history['final_threshold'] = activation.get_threshold()
         
-    # Also check if any modules in the network are ThresholdActivation
+    # Also check if any modules in the network are ThresholdActivation, JumpReLU, or *RescaledJumpReLU
     if hasattr(model, 'network'):
+        # Track which hidden layer we're on
+        hidden_layer_count = 0
+        
         for i, layer in enumerate(model.network):
-            if isinstance(layer, ThresholdActivation):
-                history[f'final_threshold_layer_{i}'] = layer.get_threshold()
+            # Linear layers are followed by activation functions in BaseMLP
+            if isinstance(layer, nn.Linear):
+                hidden_layer_count += 1
+                
+            if isinstance(layer, (ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU)):
+                # Use the hidden layer number instead of raw index
+                history[f'final_threshold_hidden_layer_{hidden_layer_count-1}'] = layer.get_threshold()
             # Also check for activation in sequential modules
             elif isinstance(layer, nn.Sequential):
                 for j, sublayer in enumerate(layer):
-                    if isinstance(sublayer, ThresholdActivation):
-                        history[f'final_threshold_layer_{i}_{j}'] = sublayer.get_threshold()
+                    if isinstance(sublayer, (ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU)):
+                        history[f'final_threshold_hidden_layer_{hidden_layer_count-1}_sub_{j}'] = sublayer.get_threshold()
     
     return trainer, history
 
@@ -240,6 +248,7 @@ class ExperimentTracker:
                 key.startswith('activation_') or 
                 key.startswith('layer_') or
                 key.startswith('final_threshold') or
+                key.startswith('threshold_hidden_layer_') or
                 key in ['temperature', 'dropout_prob']
             ):
                 self.columns.append(key)
@@ -296,10 +305,14 @@ class ExperimentTracker:
                     column_name = col.replace('activation_', '')
                 elif col.startswith('layer_'):
                     column_name = col.replace('layer_', '')
-                elif col.startswith('final_threshold_layer_'):
+                elif col.startswith('final_threshold_hidden_layer_'):
                     # Format as "Threshold Layer X"
-                    layer_num = col.replace('final_threshold_layer_', '')
-                    column_name = f"Threshold Layer {layer_num}"
+                    layer_num = col.replace('final_threshold_hidden_layer_', '')
+                    column_name = f"Threshold Hidden Layer {layer_num}"
+                elif col.startswith('threshold_hidden_layer_'):
+                    # Format as "Threshold Layer X"
+                    layer_num = col.replace('threshold_hidden_layer_', '')
+                    column_name = f"Threshold Hidden Layer {layer_num}"
                 elif col == 'final_threshold':
                     column_name = "Final Threshold"
                 
@@ -311,10 +324,14 @@ class ExperimentTracker:
                     column_name = col.replace('activation_', '')
                 elif col.startswith('layer_'):
                     column_name = col.replace('layer_', '')
-                elif col.startswith('final_threshold_layer_'):
+                elif col.startswith('final_threshold_hidden_layer_'):
                     # Format as "Threshold Layer X"
-                    layer_num = col.replace('final_threshold_layer_', '')
-                    column_name = f"Threshold Layer {layer_num}"
+                    layer_num = col.replace('final_threshold_hidden_layer_', '')
+                    column_name = f"Threshold Hidden Layer {layer_num}"
+                elif col.startswith('threshold_hidden_layer_'):
+                    # Format as "Threshold Layer X"
+                    layer_num = col.replace('threshold_hidden_layer_', '')
+                    column_name = f"Threshold Hidden Layer {layer_num}"
                 elif col == 'final_threshold':
                     column_name = "Final Threshold"
                     
@@ -534,6 +551,13 @@ class ExperimentRunner:
                                 else:
                                     result[key] = history[key]
                         
+                        # Add any threshold values from history
+                        for key, value in history.items():
+                            if (key == 'final_threshold' or 
+                                key.startswith('final_threshold_hidden_layer_') or 
+                                key.startswith('threshold_hidden_layer_')):
+                                result[key] = value
+                        
                         # Add result to tracker
                         self.tracker.add_result(result)
                         
@@ -604,6 +628,13 @@ class ExperimentRunner:
                             else:
                                 result[key] = history[key]
                     
+                    # Add any threshold values from history
+                    for key, value in history.items():
+                        if (key == 'final_threshold' or 
+                            key.startswith('final_threshold_hidden_layer_') or 
+                            key.startswith('threshold_hidden_layer_')):
+                            result[key] = value
+                    
                     # Add result to tracker
                     self.tracker.add_result(result)
                     
@@ -631,14 +662,17 @@ DEFAULT_FORMAT_SPEC = {
     'activation_eps': {'fmt': '.1e'},
     'activation_temperature': {'fmt': '.2f'},
     'activation_initial_threshold': {'fmt': '.4f'},
-    'activation_sharpness': {'fmt': '.1f'},
     
     # Final threshold values after training
     'final_threshold': {'fmt': '.4f', 'prefix': '(final) '},
-    'final_threshold_layer_0': {'fmt': '.4f', 'prefix': 'L0: '},
-    'final_threshold_layer_1': {'fmt': '.4f', 'prefix': 'L1: '},
-    'final_threshold_layer_2': {'fmt': '.4f', 'prefix': 'L2: '},
-    'final_threshold_layer_3': {'fmt': '.4f', 'prefix': 'L3: '},
+    'final_threshold_hidden_layer_0': {'fmt': '.4f', 'prefix': 'HL0: '},
+    'final_threshold_hidden_layer_1': {'fmt': '.4f', 'prefix': 'HL1: '},
+    'final_threshold_hidden_layer_2': {'fmt': '.4f', 'prefix': 'HL2: '},
+    'final_threshold_hidden_layer_3': {'fmt': '.4f', 'prefix': 'HL3: '},
+    'threshold_hidden_layer_0': {'fmt': '.4f', 'prefix': 'HL0: '},
+    'threshold_hidden_layer_1': {'fmt': '.4f', 'prefix': 'HL1: '},
+    'threshold_hidden_layer_2': {'fmt': '.4f', 'prefix': 'HL2: '},
+    'threshold_hidden_layer_3': {'fmt': '.4f', 'prefix': 'HL3: '},
     
     # Layer parameters
     'layer_temperature': {'fmt': '.2f'},

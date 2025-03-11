@@ -144,3 +144,243 @@ class FixedThreshold(nn.Module):
         sum_thresholded_activations = torch.sum(thresholded_activations)
         return (thresholded_activations / sum_thresholded_activations) * 100
     
+class JumpReLU(nn.Module):
+    """
+    JumpReLU activation function with a learnable threshold parameter.
+    
+    This activation returns 0 for all inputs less than the threshold (κ),
+    and returns the original input value for inputs greater than or equal to κ.
+    
+    Unlike ThresholdActivation which applies the threshold to the y-values (output),
+    JumpReLU applies the threshold to the x-values (input).
+    
+    This implementation uses a straight-through estimator for the gradient
+    to enable learning the threshold parameter.
+    
+    Args:
+        initial_threshold (float): Initial value for the threshold parameter (default: 0.0)
+        constraint_min (float): Minimum allowed value for threshold (default: -5.0)
+        constraint_max (float): Maximum allowed value for threshold (default: 5.0)
+    """
+    def __init__(self, initial_threshold=0.0, constraint_min=-5.0, constraint_max=5.0):
+        super().__init__()
+        # Initialize the threshold as a learnable parameter
+        self.threshold = nn.Parameter(torch.tensor(float(initial_threshold)))
+        self.constraint_min = constraint_min
+        self.constraint_max = constraint_max
+        
+        # Store the initial value for reporting
+        self.initial_value = initial_threshold
+    
+    def forward(self, x):
+        # Constrain the threshold to be within the specified range
+        constrained_threshold = torch.clamp(self.threshold, self.constraint_min, self.constraint_max)
+        
+        # Create a binary mask using exact comparison: 1 where x >= threshold, 0 elsewhere
+        mask = (x >= constrained_threshold).float()
+        
+        # Apply the mask to implement the jump behavior
+        # For backward pass, we use a straight-through estimator
+        # This means we use the exact function in forward pass,
+        # but define a custom gradient for backward pass
+        return STEFunction.apply(x, mask, constrained_threshold)
+    
+    def get_threshold(self):
+        """Return the current value of the threshold parameter"""
+        with torch.no_grad():
+            return torch.clamp(self.threshold, self.constraint_min, self.constraint_max).item()
+            
+    def extra_repr(self):
+        """Return a string with extra information"""
+        return f'initial_threshold={self.initial_value}, current_threshold={self.get_threshold():.4f}'
+
+class STEFunction(torch.autograd.Function):
+    """
+    Straight-through estimator for JumpReLU.
+    Implements a custom gradient for the threshold parameter.
+    """
+    @staticmethod
+    def forward(ctx, x, mask, threshold):
+        ctx.save_for_backward(x, mask, threshold)
+        return x * mask
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        x, mask, threshold = ctx.saved_tensors
+        
+        # Gradient w.r.t. input x: only pass gradients where mask is 1
+        grad_x = grad_output * mask
+        
+        # Gradient w.r.t. threshold: 
+        # For values near the threshold, we approximate the derivative
+        # This allows the threshold to learn
+        near_threshold = torch.abs(x - threshold) < 0.1
+        grad_threshold = -torch.sum(grad_output * x * near_threshold)
+        
+        # No gradient for mask since it's a binary value
+        return grad_x, None, grad_threshold
+    
+class RescaledJumpReLU(nn.Module):
+    """
+    RescaledJumpReLU activation function combines JumpReLU's threshold with RescaledReLU's normalization.
+    
+    This activation:
+    1. Returns 0 for all inputs less than the threshold (κ)
+    2. Returns the original input for inputs greater than or equal to κ
+    3. Normalizes the outputs to sum to 1 across each feature dimension
+    
+    The threshold parameter is learnable and constrained to positive values only.
+    
+    Args:
+        initial_threshold (float): Initial value for the threshold parameter (default: 0.1)
+        constraint_min (float): Minimum allowed value for threshold (default: 0.0)
+        constraint_max (float): Maximum allowed value for threshold (default: 5.0)
+        eps (float): Small epsilon for numerical stability in normalization (default: 1e-10)
+    """
+    def __init__(self, initial_threshold=0.1, constraint_min=0.0, constraint_max=5.0, eps=1e-10):
+        super().__init__()
+        # Initialize the threshold as a learnable parameter, ensure positive initial value
+        self.threshold = nn.Parameter(torch.tensor(float(max(initial_threshold, 0.0))))
+        self.constraint_min = constraint_min  # Min must be non-negative
+        self.constraint_max = constraint_max
+        self.eps = eps
+        
+        # Store the initial value for reporting
+        self.initial_value = initial_threshold
+    
+    def forward(self, x):
+        # Constrain the threshold to be within the specified range, ensuring it's positive
+        constrained_threshold = torch.clamp(self.threshold, self.constraint_min, self.constraint_max)
+        
+        # Create a binary mask using exact comparison: 1 where x >= threshold, 0 elsewhere
+        mask = (x >= constrained_threshold).float()
+        
+        # Apply the mask to implement the jump behavior with a straight-through estimator
+        jumped = STEFunction.apply(x, mask, constrained_threshold)
+        
+        # Add small epsilon to avoid division by zero
+        jumped_plus_eps = jumped + self.eps
+        
+        # Normalize each sample's activations to sum to 1
+        normalized = jumped_plus_eps / jumped_plus_eps.sum(dim=1, keepdim=True)
+        
+        return normalized
+    
+    def get_threshold(self):
+        """Return the current value of the threshold parameter"""
+        with torch.no_grad():
+            return torch.clamp(self.threshold, self.constraint_min, self.constraint_max).item()
+            
+    def extra_repr(self):
+        """Return a string with extra information"""
+        return f'initial_threshold={self.initial_value}, current_threshold={self.get_threshold():.4f}, eps={self.eps}'
+    
+class FixedRescaledJumpReLU(nn.Module):
+    """
+    FixedRescaledJumpReLU activation function with non-trainable threshold.
+    
+    This activation:
+    1. Returns 0 for all inputs less than the threshold (κ)
+    2. Returns the original input for inputs greater than or equal to κ
+    3. Normalizes the outputs to sum to 1 across each feature dimension
+    
+    Unlike RescaledJumpReLU, the threshold is fixed and not learnable.
+    
+    Args:
+        threshold (float): Fixed threshold value (default: 0.1)
+        eps (float): Small epsilon for numerical stability in normalization (default: 1e-10)
+    """
+    def __init__(self, threshold=0.1, eps=1e-10):
+        super().__init__()
+        self.threshold = threshold
+        self.eps = eps
+    
+    def forward(self, x):
+        # Create a binary mask using exact comparison: 1 where x >= threshold, 0 elsewhere
+        mask = (x >= self.threshold).float()
+        
+        # Apply the mask to implement the jump behavior
+        jumped = x * mask
+        
+        # Add small epsilon to avoid division by zero
+        jumped_plus_eps = jumped + self.eps
+        
+        # Normalize each sample's activations to sum to 1
+        normalized = jumped_plus_eps / jumped_plus_eps.sum(dim=1, keepdim=True)
+        
+        return normalized
+    
+    def get_threshold(self):
+        """Return the threshold value (for compatibility with other threshold functions)"""
+        return self.threshold
+            
+    def extra_repr(self):
+        """Return a string with extra information"""
+        return f'threshold={self.threshold}, eps={self.eps}'
+    
+class HectoRescaledReLU(RescaledReLU):
+    """
+    HectoRescaledReLU activation function that normalizes to a simplex summing to 100.
+    
+    This is identical to RescaledReLU but multiplies the final output by 100,
+    so activations sum to 100 instead of 1.
+    
+    Args:
+        eps (float): Small epsilon for numerical stability (default: 1e-10)
+    """
+    def __init__(self, eps=1e-10):
+        super().__init__(eps=eps)
+    
+    def forward(self, x):
+        # Get normalized output from parent class
+        normalized = super().forward(x)
+        # Multiply by 100 to scale to a simplex summing to 100
+        return normalized * 100
+
+class HectoRescaledJumpReLU(RescaledJumpReLU):
+    """
+    HectoRescaledJumpReLU activation function that normalizes to a simplex summing to 100.
+    
+    This is identical to RescaledJumpReLU but multiplies the final output by 100,
+    so activations sum to 100 instead of 1.
+    
+    Args:
+        initial_threshold (float): Initial value for the threshold (default: 0.1)
+        constraint_min (float): Minimum allowed value for the threshold (default: 0.0)
+        constraint_max (float): Maximum allowed value for the threshold (default: 5.0)
+        eps (float): Small epsilon for numerical stability (default: 1e-10)
+    """
+    def __init__(self, initial_threshold=0.1, constraint_min=0.0, constraint_max=5.0, eps=1e-10):
+        super().__init__(
+            initial_threshold=initial_threshold,
+            constraint_min=constraint_min,
+            constraint_max=constraint_max,
+            eps=eps
+        )
+    
+    def forward(self, x):
+        # Get normalized output from parent class
+        normalized = super().forward(x)
+        # Multiply by 100 to scale to a simplex summing to 100
+        return normalized * 100
+
+class HectoFixedRescaledJumpReLU(FixedRescaledJumpReLU):
+    """
+    HectoFixedRescaledJumpReLU activation function that normalizes to a simplex summing to 100.
+    
+    This is identical to FixedRescaledJumpReLU but multiplies the final output by 100,
+    so activations sum to 100 instead of 1.
+    
+    Args:
+        threshold (float): Fixed threshold value (default: 0.1)
+        eps (float): Small epsilon for numerical stability (default: 1e-10)
+    """
+    def __init__(self, threshold=0.1, eps=1e-10):
+        super().__init__(threshold=threshold, eps=eps)
+    
+    def forward(self, x):
+        # Get normalized output from parent class
+        normalized = super().forward(x)
+        # Multiply by 100 to scale to a simplex summing to 100
+        return normalized * 100
+    

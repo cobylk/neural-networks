@@ -35,6 +35,7 @@ from file_utils import (EXPERIMENT_TYPES, BASE_RESULTS_DIR, FILENAMES,
                       get_results_path, get_run_path, get_checkpoint_path,
                       get_stats_path, get_plot_path, list_experiment_dirs,
                       list_run_dirs, list_all_run_dirs)
+import os
 
 class FileManager:
     """Centralized file management system for MNIST experiments.
@@ -99,7 +100,15 @@ class FileManager:
         Returns:
             Path to the run directory
         """
-        return get_run_path(experiment_type, run_name)
+        # Check if the base_dir is the default or a custom path
+        if self.base_dir == Path(BASE_RESULTS_DIR):
+            # Use the standard path from get_run_path if using default base_dir
+            return get_run_path(experiment_type, run_name)
+        else:
+            # If a custom base_dir was provided, use it directly
+            custom_path = self.base_dir / run_name
+            os.makedirs(custom_path, exist_ok=True)
+            return custom_path
     
     def get_checkpoint_path(self, run_dir: Path, filename: str) -> Path:
         """Get path for a model checkpoint.
@@ -304,7 +313,7 @@ class ModelAnalyzer:
                     'min': float(param.min()),
                     'max': float(param.max()),
                     'norm': float(param.norm()),
-                    'sparsity': float((param == 0).float().mean()),
+                    'sparsity': float(torch.isclose(param, torch.zeros_like(param), atol=1e-8).float().mean()),
                     'has_negative': float((param < 0).float().mean()) > 0,
                     'percent_negative': float((param < 0).float().mean() * 100),
                     'shape': list(param.shape),
@@ -393,7 +402,7 @@ class ModelAnalyzer:
                     all_stats[name]['means'].append(float(activation.mean()))
                     all_stats[name]['stds'].append(float(activation.std()))
                     all_stats[name]['sums'].append(float(activation.sum()))
-                    all_stats[name]['sparsity'].append(float((activation == 0).float().mean()))
+                    all_stats[name]['sparsity'].append(float(torch.isclose(activation, torch.zeros_like(activation), atol=1e-8).float().mean()))
         
         # Compute average statistics
         for name in all_stats:
@@ -441,7 +450,7 @@ class ModelAnalyzer:
             max_val = stats['avg_maxs']
             sum_val = stats['avg_sums']
             neg_pct = (all_acts < 0).mean() * 100
-            zero_pct = (all_acts == 0).mean() * 100
+            zero_pct = np.isclose(all_acts, 0, atol=1e-8).mean() * 100
             sum_one_pct = 100 * np.mean(np.abs(all_acts.reshape(-1, 1000).sum(axis=1) - 1.0) < 0.01)
             
             result = (f'Mean: {mean_val:.4f}, Std: {std_val:.4f}\n'
@@ -553,7 +562,7 @@ class ModelAnalyzer:
                         
                     activation_stats[name_key]['means'].append(float(activation.mean()))
                     activation_stats[name_key]['stds'].append(float(activation.std()))
-                    activation_stats[name_key]['sparsity'].append(float((activation == 0).float().mean()))
+                    activation_stats[name_key]['sparsity'].append(float(torch.isclose(activation, torch.zeros_like(activation), atol=1e-8).float().mean()))
                     activation_stats[name_key]['mins'].append(float(activation.min()))
                     activation_stats[name_key]['maxs'].append(float(activation.max()))
                     activation_stats[name_key]['sums'].append(float(activation.sum()))
@@ -799,8 +808,43 @@ class MNISTTrainer:
         self.history['test_acc'] = test_acc
         print(f'\nTest Loss: {test_loss:.4f}, Test Acc: {test_acc:.2f}%')
         
+        # After training is complete, check for JumpReLU and ThresholdActivation instances in the model
+        from activations import ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU
+        
+        # Store the threshold values directly in the history metadata
+        threshold_values = {}
+        
+        # Check if the main activation is a ThresholdActivation, JumpReLU, RescaledJumpReLU, or FixedRescaledJumpReLU
+        if hasattr(self.model, 'network'):
+            # Track which hidden layer we're on
+            hidden_layer_count = 0
+            activation_count = 0
+            
+            for i, layer in enumerate(self.model.network):
+                # Linear layers are followed by activation functions in BaseMLP
+                if isinstance(layer, nn.Linear):
+                    hidden_layer_count += 1
+                
+                if isinstance(layer, (ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU)):
+                    # Use the hidden layer number instead of raw index
+                    threshold_values[f'threshold_hidden_layer_{hidden_layer_count-1}'] = layer.get_threshold()
+                    activation_count += 1
+                # Also check for activation in sequential modules
+                elif isinstance(layer, nn.Sequential):
+                    for j, sublayer in enumerate(layer):
+                        if isinstance(sublayer, (ThresholdActivation, JumpReLU, RescaledJumpReLU, FixedRescaledJumpReLU)):
+                            threshold_values[f'threshold_hidden_layer_{hidden_layer_count-1}_sub_{j}'] = sublayer.get_threshold()
+                            activation_count += 1
+        
+        # Store the threshold values in metadata
+        if threshold_values:
+            if 'threshold_values' not in self.history['metadata']:
+                self.history['metadata']['threshold_values'] = {}
+            self.history['metadata']['threshold_values'].update(threshold_values)
+        
         # Save final results
         self.save_results()
+        
         return self.history
     
     def save_checkpoint(self, filename: str):
