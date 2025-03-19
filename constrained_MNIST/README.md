@@ -2,6 +2,8 @@
 
 This repository contains code for running neural network experiments on the MNIST dataset with various architectures, activations, and training configurations.
 
+The current main files in which I am running experiments are `MNIST_runner.py` and `stochastic_MNIST_runner.py`.
+
 ## File Management System
 
 ### Directory Structure
