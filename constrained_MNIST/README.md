@@ -73,7 +73,6 @@ The repository includes several ready-to-use runner scripts:
 
 - `MNIST_runner.py`: Runs vanilla MLP experiments with different activations
 - `stochastic_MNIST_runner.py`: Runs experiments with stochastic layers
-- `architecture_runner.py`: Compares different network architectures
 
 ## Usage
 

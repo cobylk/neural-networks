@@ -99,6 +99,25 @@ class BaseMLP(nn.Module):
                         act = activation_class(scale=activation.scale)
                     else:
                         act = activation_class()
+                # Handle decaying activation types
+                elif activation_class.__name__ in ['DecayingRescaledJumpReLU', 'DecayingRescaledReLU', 'DecayingFixedRescaledJumpReLU']:
+                    kwargs = {}
+                    # Common parameters for all decaying activations
+                    for param in ['initial_scale', 'final_scale', 'decay_epochs', 'decay_schedule', 'decay_rate', 'eps', 'total_epochs']:
+                        if hasattr(activation, param):
+                            kwargs[param] = getattr(activation, param)
+                    
+                    # Specific parameters for different activation types
+                    if activation_class.__name__ == 'DecayingRescaledJumpReLU':
+                        for param in ['initial_threshold', 'constraint_min', 'constraint_max']:
+                            if hasattr(activation, param):
+                                kwargs[param] = getattr(activation, param)
+                    elif activation_class.__name__ == 'DecayingFixedRescaledJumpReLU':
+                        if hasattr(activation, 'threshold'):
+                            kwargs['threshold'] = activation.threshold
+                    
+                    # Create the activation with proper parameters
+                    act = activation_class(**kwargs)
                 else:
                     # Default for standard activations
                     act = activation_class()
