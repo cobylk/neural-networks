@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 class RescaledReLU(nn.Module):
     """ReLU activation where outputs are rescaled to sum to 1"""
@@ -383,4 +384,254 @@ class HectoFixedRescaledJumpReLU(FixedRescaledJumpReLU):
         normalized = super().forward(x)
         # Multiply by 100 to scale to a simplex summing to 100
         return normalized * 100
+    
+class EpochAwareMixin:
+    """
+    Mixin that allows modules to be aware of the current training epoch.
+    
+    This mixin can be added to any activation function to make it epoch-aware,
+    enabling functionality that changes over the course of training.
+    
+    Args:
+        total_epochs (int): Total number of epochs for the full training cycle
+        decay_epochs (int, optional): Number of epochs over which to decay. After this, 
+                                     the value remains at final_value. If None, decays over total_epochs.
+        decay_schedule (str, optional): Type of decay schedule to use ('linear', 'exponential', 'cosine')
+        decay_rate (float, optional): Rate parameter for exponential decay (only used if decay_schedule='exponential')
+    """
+    
+    def __init__(self, total_epochs=100, decay_epochs=10, decay_schedule='exponential', decay_rate=0.4, **kwargs):
+        # Note: We don't call super().__init__() here as it's a mixin
+        # The actual parent class init will be called by the concrete class
+        self.current_epoch = 0
+        self.total_epochs = total_epochs
+        self.decay_epochs = total_epochs if decay_epochs is None else decay_epochs
+        self.decay_schedule = decay_schedule
+        self.decay_rate = decay_rate
+        
+    def set_epoch(self, epoch):
+        """
+        Update the current epoch.
+        
+        Args:
+            epoch (int): Current training epoch
+        
+        Returns:
+            self: For method chaining
+        """
+        self.current_epoch = min(epoch, self.total_epochs)
+        return self
+        
+    def get_training_progress(self):
+        """
+        Return training progress as a value between 0 and 1.
+        
+        Returns:
+            float: Training progress (0.0 at start, 1.0 at or after decay_epochs)
+        """
+        return min(1.0, max(0.0, self.current_epoch / self.decay_epochs))
+    
+    def get_decay_factor(self, initial_value=1.0, final_value=0.0):
+        """
+        Calculate a decay factor based on the current training progress.
+        
+        This method implements various decay schedules between initial_value and final_value:
+        - linear: straight line interpolation
+        - exponential: exponential decay using decay_rate
+        - cosine: cosine annealing schedule
+        
+        The decay occurs over decay_epochs rather than total_epochs, allowing for
+        a phase of decay followed by a stable phase.
+        
+        Args:
+            initial_value (float): Starting value at epoch 0
+            final_value (float): Final value at or after decay_epochs
+            
+        Returns:
+            float: Current value based on chosen decay schedule
+        """
+        # If we've passed the decay epochs, return the final value
+        if self.current_epoch >= self.decay_epochs:
+            return final_value
+            
+        progress = self.get_training_progress()
+        
+        if self.decay_schedule == 'linear':
+            # Linear interpolation
+            return initial_value * (1 - progress) + final_value * progress
+            
+        elif self.decay_schedule == 'exponential':
+            # Exponential decay
+            decay = self.decay_rate ** (self.current_epoch)
+            normalized_decay = (decay - self.decay_rate ** self.decay_epochs) / (1 - self.decay_rate ** self.decay_epochs)
+            return initial_value * normalized_decay + final_value * (1 - normalized_decay)
+            
+        elif self.decay_schedule == 'cosine':
+            # Cosine annealing
+            return final_value + 0.5 * (initial_value - final_value) * (1 + math.cos(math.pi * progress))
+            
+        else:
+            # Default to linear
+            return initial_value * (1 - progress) + final_value * progress
+    
+class DecayingRescaledReLU(EpochAwareMixin, RescaledReLU):
+    """
+    RescaledReLU with a scale factor that decays over training.
+    
+    This activation function applies RescaledReLU, then multiplies by a factor
+    that decays from initial_scale to final_scale during training according
+    to the selected decay schedule.
+    
+    Args:
+        initial_scale (float): Initial scale factor at the beginning of training (default: 1000)
+        final_scale (float): Final scale factor at the end of decay_epochs (default: 1)
+        decay_epochs (int, optional): Number of epochs over which to decay. If None, decays over total_epochs.
+        decay_schedule (str): Type of decay ('linear', 'exponential', 'cosine') (default: 'linear')
+        decay_rate (float): Rate parameter for exponential decay (default: 0.95)
+        eps (float): Small epsilon for numerical stability in normalization (default: 1e-10)
+    """
+    def __init__(self, initial_scale=100, final_scale=1, decay_epochs=10, 
+                 decay_schedule='exponential', decay_rate=0.4, eps=1e-10, total_epochs=100):
+        # Initialize both parent classes
+        EpochAwareMixin.__init__(self, total_epochs=total_epochs, decay_epochs=decay_epochs,
+                                 decay_schedule=decay_schedule, decay_rate=decay_rate)
+        RescaledReLU.__init__(self, eps=eps)
+        
+        self.initial_scale = initial_scale
+        self.final_scale = final_scale
+        self.forward_count = 0
+    
+    def forward(self, x):
+        # Get normalized output from RescaledReLU
+        normalized = RescaledReLU.forward(self, x)
+        
+        # Apply decaying scale factor
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        
+        # Debug print randomly (approx. every 100 forward passes)
+        self.forward_count += 1
+        if self.forward_count % 100 == 0 and torch.rand(1).item() < 0.01:
+            print(f"[DEBUG] DecayingRescaledReLU: epoch={self.current_epoch}/{self.decay_epochs}, "
+                  f"scale={current_scale:.4f}, initial={self.initial_scale}, final={self.final_scale}")
+        
+        return normalized * current_scale
+    
+    def extra_repr(self):
+        """Return a string with extra information"""
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        return (f'initial_scale={self.initial_scale}, final_scale={self.final_scale}, '
+                f'current_scale={current_scale:.2f}, decay_schedule={self.decay_schedule}, '
+                f'current_epoch={self.current_epoch}/{self.decay_epochs}')
+
+
+class DecayingRescaledJumpReLU(EpochAwareMixin, RescaledJumpReLU):
+    """
+    RescaledJumpReLU with a scale factor that decays over training.
+    
+    This activation function applies RescaledJumpReLU, then multiplies by a factor
+    that decays from initial_scale to final_scale during training according
+    to the selected decay schedule.
+    
+    Args:
+        initial_scale (float): Initial scale factor at the beginning of training (default: 1000)
+        final_scale (float): Final scale factor at the end of decay_epochs (default: 1)
+        initial_threshold (float): Initial value for the threshold (default: 0.1)
+        constraint_min (float): Minimum allowed value for the threshold (default: 0.0)
+        constraint_max (float): Maximum allowed value for the threshold (default: 5.0)
+        decay_epochs (int, optional): Number of epochs over which to decay. If None, decays over total_epochs.
+        decay_schedule (str): Type of decay ('linear', 'exponential', 'cosine') (default: 'linear')
+        decay_rate (float): Rate parameter for exponential decay (default: 0.95)
+        eps (float): Small epsilon for numerical stability in normalization (default: 1e-10)
+    """
+    def __init__(self, initial_scale=100, final_scale=1, initial_threshold=0.1, 
+                 constraint_min=0.0, constraint_max=5.0, decay_epochs=10,
+                 decay_schedule='exponential', decay_rate=0.4, eps=1e-10, total_epochs=100):
+        # Initialize both parent classes
+        EpochAwareMixin.__init__(self, total_epochs=total_epochs, decay_epochs=decay_epochs,
+                                 decay_schedule=decay_schedule, decay_rate=decay_rate)
+        RescaledJumpReLU.__init__(self, initial_threshold=initial_threshold,
+                                constraint_min=constraint_min, constraint_max=constraint_max, 
+                                eps=eps)
+        
+        self.initial_scale = initial_scale
+        self.final_scale = final_scale
+        self.forward_count = 0
+    
+    def forward(self, x):
+        # Get normalized output from RescaledJumpReLU
+        normalized = RescaledJumpReLU.forward(self, x)
+        
+        # Apply decaying scale factor
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        
+        # Debug print randomly (approx. every 100 forward passes)
+        self.forward_count += 1
+        if self.forward_count % 100 == 0 and torch.rand(1).item() < 0.01:
+            print(f"[DEBUG] DecayingRescaledJumpReLU: epoch={self.current_epoch}/{self.decay_epochs}, "
+                  f"scale={current_scale:.4f}, threshold={self.get_threshold():.4f}, "
+                  f"initial={self.initial_scale}, final={self.final_scale}")
+        
+        return normalized * current_scale
+    
+    def extra_repr(self):
+        """Return a string with extra information"""
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        threshold_info = RescaledJumpReLU.extra_repr(self)
+        return (f'{threshold_info}, initial_scale={self.initial_scale}, final_scale={self.final_scale}, '
+                f'current_scale={current_scale:.2f}, decay_schedule={self.decay_schedule}, '
+                f'current_epoch={self.current_epoch}/{self.decay_epochs}')
+
+
+class DecayingFixedRescaledJumpReLU(EpochAwareMixin, FixedRescaledJumpReLU):
+    """
+    FixedRescaledJumpReLU with a scale factor that decays over training.
+    
+    This activation function applies FixedRescaledJumpReLU, then multiplies by a factor
+    that decays from initial_scale to final_scale during training according
+    to the selected decay schedule.
+    
+    Args:
+        initial_scale (float): Initial scale factor at the beginning of training (default: 1000)
+        final_scale (float): Final scale factor at the end of decay_epochs (default: 1)
+        threshold (float): Fixed threshold value (default: 0.1)
+        decay_epochs (int, optional): Number of epochs over which to decay. If None, decays over total_epochs.
+        decay_schedule (str): Type of decay ('linear', 'exponential', 'cosine') (default: 'linear')
+        decay_rate (float): Rate parameter for exponential decay (default: 0.95)
+        eps (float): Small epsilon for numerical stability in normalization (default: 1e-10)
+    """
+    def __init__(self, initial_scale=100, final_scale=1, threshold=0.1, 
+                 decay_epochs=10, decay_schedule='exponential', decay_rate=0.4, 
+                 eps=1e-10, total_epochs=100):
+        # Initialize both parent classes
+        EpochAwareMixin.__init__(self, total_epochs=total_epochs, decay_epochs=decay_epochs,
+                                 decay_schedule=decay_schedule, decay_rate=decay_rate)
+        FixedRescaledJumpReLU.__init__(self, threshold=threshold, eps=eps)
+        
+        self.initial_scale = initial_scale
+        self.final_scale = final_scale
+        self.forward_count = 0
+    
+    def forward(self, x):
+        # Get normalized output from FixedRescaledJumpReLU
+        normalized = FixedRescaledJumpReLU.forward(self, x)
+        
+        # Apply decaying scale factor
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        
+        # Debug print randomly (approx. every 100 forward passes)
+        self.forward_count += 1
+        if self.forward_count % 100 == 0 and torch.rand(1).item() < 0.01:
+            print(f"[DEBUG] DecayingFixedRescaledJumpReLU: epoch={self.current_epoch}/{self.decay_epochs}, "
+                  f"scale={current_scale:.4f}, threshold={self.threshold:.4f}, "
+                  f"initial={self.initial_scale}, final={self.final_scale}")
+        
+        return normalized * current_scale
+    
+    def extra_repr(self):
+        """Return a string with extra information"""
+        current_scale = self.get_decay_factor(self.initial_scale, self.final_scale)
+        threshold_info = FixedRescaledJumpReLU.extra_repr(self)
+        return (f'{threshold_info}, initial_scale={self.initial_scale}, final_scale={self.final_scale}, '
+                f'current_scale={current_scale:.2f}, decay_schedule={self.decay_schedule}, '
+                f'current_epoch={self.current_epoch}/{self.decay_epochs}')
     

@@ -163,7 +163,8 @@ def run_experiment(config,
         'experiment_type': config.experiment_type,
         'plot_config': plot_config,
         'tags': tags,
-        'preprocess_fn': preprocess_fn
+        'preprocess_fn': preprocess_fn,
+        'total_epochs': config.epochs  # Pass the total_epochs for epoch-aware modules
     }
     
     # Override with any additional trainer parameters

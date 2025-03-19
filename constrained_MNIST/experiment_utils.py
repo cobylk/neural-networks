@@ -605,7 +605,8 @@ class MNISTTrainer:
         criterion: nn.Module = nn.CrossEntropyLoss(),
         tags: List[str] = None,
         plot_config: Optional[PlotConfig] = None,
-        preprocess_fn: Optional[callable] = None
+        preprocess_fn: Optional[callable] = None,
+        total_epochs: int = 100
     ):
         self.model = model.to(device)
         self.device = device
@@ -617,6 +618,7 @@ class MNISTTrainer:
         self.criterion = criterion
         self.preprocess_fn = preprocess_fn
         self.tags = tags or []
+        self.total_epochs = total_epochs
         
         # Initialize file manager
         self.file_manager = FileManager(save_dir)
@@ -648,6 +650,10 @@ class MNISTTrainer:
         # Load and prepare data
         self.train_loader, self.val_loader, self.test_loader = self._setup_data()
         
+        # Initialize epoch-aware modules with the total epochs
+        self.set_epoch_for_modules(self.model, 0)
+        self.set_total_epochs_for_modules(self.model, self.total_epochs)
+        
         # Training history and metadata
         self.history = {
             'train_loss': [],
@@ -672,6 +678,7 @@ class MNISTTrainer:
                     'learning_rate': learning_rate,
                     'batch_size': batch_size,
                     'device': device,
+                    'total_epochs': total_epochs,
                     'tags': self.tags
                 },
                 'system_info': get_system_info(),
@@ -710,8 +717,11 @@ class MNISTTrainer:
             return self.preprocess_fn(data)
         return data
     
-    def train_epoch(self) -> Tuple[float, float]:
+    def train_epoch(self, epoch) -> Tuple[float, float]:
         """Train for one epoch"""
+        # Set the current epoch for all epoch-aware modules
+        self.set_epoch_for_modules(self.model, epoch)
+        
         self.model.train()
         total_loss = 0
         correct = 0
@@ -738,6 +748,18 @@ class MNISTTrainer:
         avg_loss = total_loss / len(self.train_loader)
         accuracy = 100. * correct / total
         return avg_loss, accuracy
+    
+    def set_epoch_for_modules(self, model, epoch):
+        """
+        Recursively set the current epoch for all epoch-aware modules in the model.
+        
+        Args:
+            model: The PyTorch model
+            epoch: Current epoch number
+        """
+        for module in model.modules():  # This traverses the entire model hierarchy
+            if hasattr(module, 'set_epoch'):
+                module.set_epoch(epoch)
     
     @torch.no_grad()
     def evaluate(self, loader: DataLoader) -> Tuple[float, float]:
@@ -777,7 +799,7 @@ class MNISTTrainer:
         
         for epoch in (pbar := tqdm(range(epochs))):
             # Train
-            train_loss, train_acc = self.train_epoch()
+            train_loss, train_acc = self.train_epoch(epoch)
             
             # Validate
             val_loss, val_acc = self.evaluate(self.val_loader)
@@ -938,3 +960,15 @@ class MNISTTrainer:
             self.file_manager.save_plot(act_dist_fig, plot_path, self.plot_config.dpi)
         
         print(f'Results saved in: {self.run_dir}')
+
+    def set_total_epochs_for_modules(self, model, total_epochs):
+        """
+        Set the total epochs for all epoch-aware modules in the model.
+        
+        Args:
+            model: The PyTorch model
+            total_epochs: Total number of epochs for training
+        """
+        for module in model.modules():
+            if hasattr(module, 'total_epochs'):
+                module.total_epochs = total_epochs

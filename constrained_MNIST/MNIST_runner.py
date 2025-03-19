@@ -19,7 +19,10 @@ from activations import (
     FixedRescaledJumpReLU,
     HectoRescaledReLU,
     HectoRescaledJumpReLU,
-    HectoFixedRescaledJumpReLU
+    HectoFixedRescaledJumpReLU,
+    DecayingRescaledJumpReLU,
+    DecayingRescaledReLU,
+    DecayingFixedRescaledJumpReLU
 )
 from config import VanillaExperimentConfig, EXPERIMENT_TYPES
 from experiment_runner_utils import (
@@ -35,10 +38,13 @@ def main():
         # (nn.ReLU, {}),  
         # (JumpReLU, {'initial_threshold': 0.5}),  
         # (RescaledReLU, {'eps': 1e-10}),  
-        # (RescaledJumpReLU, {'initial_threshold': 0.5, 'eps': 1e-10}),
-        # (HectoRescaledReLU, {}),
-        # (HectoRescaledJumpReLU, {'initial_threshold': 0.5}),
-        (HectoFixedRescaledJumpReLU, {'threshold': 0.7})
+        (RescaledJumpReLU, {'initial_threshold': 0.5, 'eps': 1e-10}),
+        (HectoRescaledReLU, {}),
+        (HectoRescaledJumpReLU, {'initial_threshold': 0.5}),
+        # (HectoFixedRescaledJumpReLU, {'threshold': 0.7})
+        # (DecayingRescaledJumpReLU, {'initial_threshold': 0.5, 'initial_scale': 100, 'final_scale': 1, 'decay_epochs': 10, 'decay_schedule': 'exponential', 'decay_rate': 0.95}),
+        # (DecayingRescaledReLU, {'initial_scale': 100, 'final_scale': 1, 'decay_epochs': 10, 'decay_schedule': 'exponential', 'decay_rate': 0.95}),
+        # (DecayingFixedRescaledJumpReLU, {'threshold': 0.5, 'initial_scale': 100, 'final_scale': 1, 'decay_epochs': 10, 'decay_schedule': 'exponential', 'decay_rate': 0.95})
     ]
     
     # Create experiment definition
@@ -47,12 +53,12 @@ def main():
         config_class=VanillaExperimentConfig,
         base_params={
             'hidden_dims': [512, 256, 128, 64],
-            'dropout_prob': 0.2,
+            'dropout_prob': 0.0,
             'epochs': 100,
             'learning_rate': 0.001,
             'early_stopping_patience': 20,
             'experiment_type': EXPERIMENT_TYPES['vanilla'],
-            'save_dir': 'results/rescaled_convergence_speed/run_3'
+            'save_dir': 'results/rescaled_convergence_speed/run_6'
         }
     )
     
